@@ -1,0 +1,4 @@
+﻿# Config dedicada al Puente WhatsApp (no toca ~/.cloudflared/config.yml, que pertenece a GolosOS Caja)
+# Permite que el quick tunnel use su propia regla de ingress generada automaticamente via --url
+loglevel: info
+
