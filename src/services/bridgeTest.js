@@ -5,7 +5,10 @@ const path = require('path');
 const PORT = 2013;
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OPENWA_URL = 'http://localhost:2785';
-const MODEL = 'qwen2.5-coder:3b'; // Asegúmate de que coincida con tu modelo activo en Ollama
+const DEFAULT_MODEL = 'qwen2.5-coder:3b'; // Modelo local (Ollama) o remoto (OpenRouter) segun BOT_PROVIDER
+const DEFAULT_PROVIDER = 'ollama'; // 'ollama' | 'openrouter'
+let BOT_PROVIDER = DEFAULT_PROVIDER;
+let BOT_MODEL = DEFAULT_MODEL;
 // System prompt del asistente Piston Quarks (Gema 4 - Ingeniería Conversacional)
 // OPTIMIZADO con metodología Prompt Master (github.com/nidhinjs/prompt-master) para Qwen2.5 via Ollama
 const DEFAULT_SYSTEM_PROMPT = [
@@ -23,6 +26,8 @@ let SYSTEM_PROMPT = DEFAULT_SYSTEM_PROMPT;
 const DEFAULT_KEYWORDS = ['precio', 'catálogo', 'catalogo', 'planes', 'servicios', 'hola', 'información', 'informacion'];
 let BOT_STATE_KEYWORDS = [...DEFAULT_KEYWORDS];
 const BOT_STATE_FILE = path.join(__dirname, '..', 'bot_state.json');
+const ACTIONS_FILE = path.join(__dirname, '..', 'bot_actions.json');
+let BOT_ACTIONS = [];
 
 function loadBotState() {
     try {
@@ -31,24 +36,52 @@ function loadBotState() {
         if (Array.isArray(parsed.keywords) && parsed.keywords.every(k => typeof k === 'string') && typeof parsed.prompt === 'string') {
             BOT_STATE_KEYWORDS = parsed.keywords.map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
             SYSTEM_PROMPT = parsed.prompt;
-            return { keywords: BOT_STATE_KEYWORDS, prompt: SYSTEM_PROMPT };
         }
+        if (typeof parsed.provider === 'string' && parsed.provider) BOT_PROVIDER = parsed.provider;
+        if (typeof parsed.model === 'string' && parsed.model) BOT_MODEL = parsed.model;
     } catch (e) { /* sin archivo -> defaults */ }
-    return { keywords: [...BOT_STATE_KEYWORDS], prompt: SYSTEM_PROMPT };
+    return { keywords: [...BOT_STATE_KEYWORDS], prompt: SYSTEM_PROMPT, provider: BOT_PROVIDER, model: BOT_MODEL };
 }
 
 function saveBotState(next) {
-    BOT_STATE_KEYWORDS = next.keywords.map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
-    SYSTEM_PROMPT = next.prompt;
-    fs.writeFileSync(BOT_STATE_FILE, JSON.stringify(next, null, 2));
+    if (Array.isArray(next.keywords)) BOT_STATE_KEYWORDS = next.keywords.map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+    if (typeof next.prompt === 'string') SYSTEM_PROMPT = next.prompt;
+    if (typeof next.provider === 'string') BOT_PROVIDER = next.provider;
+    if (typeof next.model === 'string') BOT_MODEL = next.model;
+    fs.writeFileSync(BOT_STATE_FILE, JSON.stringify({ keywords: BOT_STATE_KEYWORDS, prompt: SYSTEM_PROMPT, provider: BOT_PROVIDER, model: BOT_MODEL }, null, 2));
 }
 
 function getBotState() {
-    return { keywords: [...BOT_STATE_KEYWORDS], prompt: SYSTEM_PROMPT };
+    return { keywords: [...BOT_STATE_KEYWORDS], prompt: SYSTEM_PROMPT, provider: BOT_PROVIDER, model: BOT_MODEL };
 }
 
-// Cargar estado persistido (keywords + prompt) al arrancar el puente
+// Cargar estado persistido (keywords + prompt + provider/model) al arrancar el puente
 loadBotState();
+
+// Cargar manual de acciones (respuestas predefinidas por intento)
+function loadBotActions() {
+    try {
+        const raw = fs.readFileSync(ACTIONS_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.actions)) BOT_ACTIONS = parsed.actions;
+    } catch (e) { /* sin archivo -> sin acciones predefinidas */ }
+}
+loadBotActions();
+
+// Buscar una accion predefinida cuyo trigger matchee el mensaje entrante
+function findAction(text) {
+    const lowerMsg = (text || '').toLowerCase();
+    for (const action of BOT_ACTIONS) {
+        const triggers = action.triggers || [];
+        for (const t of triggers) {
+            const tl = (t || '').toLowerCase();
+            if (tl && lowerMsg.includes(tl)) {
+                return action;
+            }
+        }
+    }
+    return null;
+}
 
 const ADMIN_HTML = `<!DOCTYPE html>
 <html lang="es">
@@ -75,6 +108,15 @@ const ADMIN_HTML = `<!DOCTYPE html>
 <label for="keywords">Palabras / frases de activación (una por línea):
   <textarea id="keywords"></textarea>
 </label>
+<label for="provider">Proveedor de IA:
+    <select id="provider">
+      <option value="ollama">Ollama (local - Qwen2.5)</option>
+      <option value="openrouter">OpenRouter (Claude / GPT)</option>
+    </select>
+</label>
+<label for="model">Modelo IA:
+    <input id="model" type="text" placeholder="qwen2.5-coder:3b" />
+</label>
 <button id="saveBtn">💾 Guardar cambios</button>
 <pre id="status">Cargando...</pre>
 <script>
@@ -83,12 +125,16 @@ async function load() {
     const d = await r.json();
     document.getElementById('prompt').value = d.prompt;
     document.getElementById('keywords').value = (d.keywords || []).join('\\n');
+    document.getElementById('provider').value = d.provider || 'ollama';
+    document.getElementById('model').value = d.model || 'qwen2.5-coder:3b';
     document.getElementById('status').textContent = 'Prompt y palabras cargados. Keywords: ' + (d.keywords || []).join(', ');
 }
 async function save() {
     const keywords = document.getElementById('keywords').value.split('\\n').map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
     const prompt = document.getElementById('prompt').value;
-    const r = await fetch('/admin/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keywords, prompt }) });
+    const provider = document.getElementById('provider').value;
+    const model = document.getElementById('model').value;
+    const r = await fetch('/admin/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keywords, prompt, provider, model }) });
     const d = await r.json();
     document.getElementById('status').textContent = 'Guardado: ' + JSON.stringify(d.state);
 }
@@ -100,7 +146,7 @@ window.addEventListener('load', load);
 
 const conversationHistory = {};
 
-async function callOllama(prompt, sessionId) {
+async function callAI(prompt, sessionId) {
     if (!conversationHistory[sessionId]) {
         conversationHistory[sessionId] = [];
     }
@@ -108,16 +154,39 @@ async function callOllama(prompt, sessionId) {
     const fullPrompt = SYSTEM_PROMPT + '\n' + conversationHistory[sessionId].join('\n') + '\nUser: ' + prompt;
 
     const data = JSON.stringify({
-        model: MODEL,
+        model: BOT_MODEL,
         prompt: fullPrompt,
         stream: false,
         options: { num_ctx: 4096 }
     });
 
+    const isOpenRouter = (BOT_PROVIDER === 'openrouter');
+    const target = isOpenRouter
+        ? 'https://openrouter.ai/api/v1/chat/completions'
+        : OLLAMA_URL;
+    const requestData = isOpenRouter
+        ? JSON.stringify({
+              model: BOT_MODEL,
+              messages: [
+                  { role: 'system', content: SYSTEM_PROMPT },
+                  { role: 'user', content: prompt }
+              ],
+              stream: false
+          })
+        : data;
+    const requestHeaders = isOpenRouter
+        ? {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + (process.env.OPENROUTER_API_KEY || ''),
+              'HTTP-Referer': 'https://pistonquarks.store',
+              'X-Title': 'Piston Quarks Bot'
+          }
+        : { 'Content-Type': 'application/json' };
+
     return new Promise((resolve, reject) => {
-        const req = http.request(OLLAMA_URL, {
+        const req = http.request(target, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: requestHeaders
         }, (res) => {
             let responseBody = '';
             res.on('data', (chunk) => responseBody += chunk);
@@ -125,20 +194,20 @@ async function callOllama(prompt, sessionId) {
                 try {
                     const parsed = JSON.parse(responseBody);
                     conversationHistory[sessionId].push('User: ' + prompt);
-                    conversationHistory[sessionId].push('AI: ' + parsed.response);
+                    conversationHistory[sessionId].push('AI: ' + (isOpenRouter ? ((parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) || '') : ((parsed && parsed.response) || '')));
                     
                     if (conversationHistory[sessionId].length > 10) {
                         conversationHistory[sessionId].shift();
                         conversationHistory[sessionId].shift();
                     }
-                    resolve(parsed.response);
+                    resolve(isOpenRouter ? ((parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) || '') : ((parsed && parsed.response) || ''));
                 } catch (e) {
                     reject('Error parsing Ollama response: ' + e.message);
                 }
             });
         });
         req.on('error', reject);
-        req.write(data);
+        req.write(requestData);
         req.end();
     });
 }
@@ -215,12 +284,25 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
 
-                console.log('🧠 Consultando a Ollama (' + MODEL + ')...');
-                const aiResponse = await callOllama(msgText, sessionId);
+                // Manual de acciones: respuesta predefinida por intento (evita improvisacion de la IA local)
+                const action = findAction(msgText);
+                if (action) {
+                    console.log('🎯 Accion predefinida detectada: ' + action.id);
+                    console.log('📱 Enviando respuesta (accion: ' + action.id + ') a WhatsApp (' + remoteJid + ')...');
+                    await sendToWhatsApp(sessionId, remoteJid, (action.response || '').trim());
+                    console.log('✅ Ciclo completado con exito (accion predefinida: ' + action.id + ')');
+                    console.log('='.repeat(30) + '\n');
+                    return;
+                }
+
+                console.log('🧠 Consultando a IA (' + BOT_MODEL + ' via ' + BOT_PROVIDER + ')...');
+                const aiResponse = await callAI(msgText, sessionId);
                 console.log('AI Respuesta:', aiResponse);
 
+                const finalResponse = (aiResponse && aiResponse.trim()) ? aiResponse : 'Gracias por tu consulta. Te estoy pasando con un asistente especializado de Piston Quarks para darte una respuesta detallada. Un momento.';
+
                 console.log('📱 Enviando respuesta a WhatsApp (' + remoteJid + ')...');
-                await sendToWhatsApp(sessionId, remoteJid, aiResponse);
+                await sendToWhatsApp(sessionId, remoteJid, finalResponse);
 
                 console.log('✅ Ciclo completado con éxito');
                 console.log('='.repeat(30) + '\n');
@@ -245,7 +327,12 @@ const server = http.createServer(async (req, res) => {
             try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
             const keywords = Array.isArray(parsed.keywords) ? parsed.keywords.map(k => String(k).trim().toLowerCase()).filter(k => k.length > 0) : [...BOT_STATE_KEYWORDS];
             const prompt = typeof parsed.prompt === 'string' ? parsed.prompt : SYSTEM_PROMPT;
-            saveBotState({ keywords, prompt });
+            saveBotState({
+                keywords,
+                prompt,
+                provider: typeof parsed.provider === 'string' ? parsed.provider : BOT_PROVIDER,
+                model: typeof parsed.model === 'string' ? parsed.model : BOT_MODEL
+            });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, state: getBotState() }));
         });
@@ -260,4 +347,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('🚀 Puente Piston Quarks activo en puerto ' + PORT);
     console.log('🌐 Esperando webhooks en http://localhost:' + PORT + '/webhook');
     console.log('🔑 Keywords activas: ' + BOT_STATE_KEYWORDS.join(', '));
+    console.log('🤖 IA configurada: ' + BOT_PROVIDER + ' / ' + BOT_MODEL);
+    console.log('🎯 Acciones predefinidas cargadas: ' + BOT_ACTIONS.length);
 });

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-16",
+  "description": "Manual de acciones del asistente Piston Quarks (Gema 4 - Ingenieria Conversacional). Define respuestas predefinidas por intento para que la IA local (Qwen2.5 via Ollama) responda con precision y no improvise.",
+  "escalation": {
+    "humanPhone": "+51 930 640 071",
+    "humanName": "Equipo Piston Quarks",
+    "context": "Escalar cuando la consulta requiere decision comercial/tecnica profunda, datos que no tiene el asistente, o que el cliente lo solicite explicitamente."
+  },
+  "defaultResponse": "Gracias por tu consulta. Te estoy pasando con un asistente especializado de Piston Quarks para darte una respuesta detallada. Un momento.",
+  "actions": [
+    {
+      "id": "saludo",
+      "name": "Saludo / Presentacion",
+      "type": "static",
+      "requiresHuman": false,
+      "triggers": ["hola", "hello", "hey", "buenas", "buenos dias", "buenas tardes", "buenas noches", "buenos días"],
+      "response": "¡Hola! 👋 Soy el asistente de Piston Quarks. Atendemos consultas sobre las 9 Gemas: POS Inventory, Presencia Digital, Viralización, Ingeniería Conversacional, IA Creativa, Guionización, Digitalización, Automatización y Piston Commerce. ¿En qué te ayudo?"
+    },
+    {
+      "id": "precios_gemas",
+      "name": "Consulta de precios / Catalogo de Gemas",
+      "type": "static",
+      "requiresHuman": false,
+      "triggers": ["precio", "precios", "catálogo", "catalogo", "planes", "servicios", "gema", "gemas", "costo", "costos", "tarifa", "tarifas", "cuota", "cuotas", "planes de"],
+      "response": "Tenemos 9 Gemas de Piston Quarks: G1 POS Inventory S/550, G2 Presencia Digital S/1,200, G3 Viralización S/1,200, G4 Ingeniería Conversacional S/1,200, G5 IA Creativa S/1,200, G6 Guionización S/1,200, G7 Digitalización S/1,200, G8 Automatización S/1,200, G9 Piston Commerce (cotización personalizada)."
+    },
+    {
+      "id": "detalle_gema",
+      "name": "Solicitud de detalle de una Gema especifica",
+      "type": "static",
+      "requiresHuman": false,
+      "triggers": ["detalle", "detalle de la gema", "que incluye", "que incluye la gema", "que incluye el plan", "alcance", "alcance de", "que ofrece", "que ofrece la gema", "que hace", "funcionalidad", "funcionalidades", "caracteristicas", "características"],
+      "response": "¿Sobre cuál Gema te gustaría más detalle? Puedo explicarte qué incluye cada una: POS Inventory, Presencia Digital, Viralización, Ingeniería Conversacional, IA Creativa, Guionización, Digitalización, Automatización o Piston Commerce. Dime el nombre de la Gema y te doy el detalle completo."
+    },
+    {
+      "id": "escalamiento",
+      "name": "Escalamiento a humano / Decision comercial o tecnica profunda",
+      "type": "static",
+      "requiresHuman": true,
+      "triggers": ["humano", "persona", "operador", "operadora", "agente", "comercial", "comercialista", "responsable", "jefe", "lider", "líder", "liderazgo", "contacto", "telefono", "celular", "número", "numero", "atencion", "atención", "soporte", "asistencia", "asesoria", "asesor"],
+      "response": "Te estoy pasando con un humano de Piston Quarks. Un momento. 📞 Nuestro equipo comercial esta en contacto: +51 930 640 071. Con gusto te atiende personalmente."
+    },
+    {
+      "id": "pedido_seguimiento",
+      "name": "Seguimiento de pedido / compra / pago / entrega",
+      "type": "static",
+      "requiresHuman": false,
+      "triggers": ["pedido", "pedidos", "orden", "compra", "compras", "factura", "entrega", "entregas", "envio", "envío", "pago", "pagos", "transferencia", "yape", "plin", "mercado pago", "seguimiento", "estado del pedido"],
+      "response": "Para darte seguimiento a tu pedido necesito algunos datos: tipo de negocio, volumen de trabajo y sector. Con esa informacion el equipo comercial te responde con el estado. ¿Me pasas esos datos?"
+    },
+    {
+      "id": "disclaimer_medio",
+      "name": "Aclaracion / No tengo claro",
+      "type": "static",
+      "requiresHuman": false,
+      "triggers": ["no lo tengo claro", "no tengo claro", "no estoy seguro", "no se", "no lo sabia", "no sabia", "dudas", "duda"],
+      "response": "No lo tengo claro con los datos que tengo. Te confirmo con el equipo comercial y te respondo en cuanto tenga novedad. Mientras tanto, ¿te interesa alguna de las 9 Gemas?"
+    }
+  ]
+}
