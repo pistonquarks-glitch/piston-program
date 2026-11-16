@@ -349,4 +349,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('🔑 Keywords activas: ' + BOT_STATE_KEYWORDS.join(', '));
     console.log('🤖 IA configurada: ' + BOT_PROVIDER + ' / ' + BOT_MODEL);
     console.log('🎯 Acciones predefinidas cargadas: ' + BOT_ACTIONS.length);
+    console.log('🔑 OPENROUTER_API_KEY configurada: ' + (process.env.OPENROUTER_API_KEY ? 'SI' : 'NO'));
 });
