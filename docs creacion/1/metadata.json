@@ -1,0 +1,6 @@
+{
+  "name": "OpenCode Studio",
+  "description": "Entorno de desarrollo integrado en la nube con compilador multilenguaje, terminal, Git, colaboración en tiempo real, respaldo automático, CI/CD y monitoreo predictivo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

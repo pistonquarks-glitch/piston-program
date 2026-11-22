@@ -1,0 +1,50 @@
+﻿# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and test output
+dist/
+build/
+coverage/
+.turbo/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+infrastructure/.env
+infrastructure/domains/data/
+infrastructure/domains/*/data/
+*.pem
+*.key
+*.p12
+
+# Runtime / local data
+payments/
+bot_events.log
+chat_state.json
+*.log
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Binaries / installers
+cloudflared.exe
+*.exe
+*.msi
+*.zip
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# TypeScript incremental compilation
+*.tsbuildinfo
+
+src/payments.jsonl
+src/services/*.err
+_backup_bot_*/
+

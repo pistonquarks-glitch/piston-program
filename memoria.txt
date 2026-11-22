@@ -1,0 +1,1949 @@
+
+  Cada profesión tendrá su propio conjunto de herramientas sin sobrecargar el
+  sistema.
+
+  ---
+
+  # Traductor Universal
+
+  Uno de los componentes fundamentales de Piston Core será un "Traductor
+  Universal".
+
+  Su responsabilidad será convertir protocolos, APIs y formatos diferentes en un
+  contrato interno común.
+
+  No importa si una herramienta utiliza:
+
+  * MCP;
+  * CLI;
+  * REST;
+  * GraphQL;
+  * WebSocket;
+  * SDK nativo;
+  * RPC;
+  * gRPC;
+  * archivos;
+  * terminal;
+  * procesos locales;
+  * servicios remotos.
+
+  Todo deberá convertirse internamente a un protocolo estándar de Piston.
+
+  Los agentes nunca dependerán directamente de un protocolo externo.
+
+  Solo conocerán el protocolo interno definido por Piston Core.
+
+  Esto permitirá sustituir proveedores y tecnologías sin modificar los agentes ni
+  las aplicaciones.
+
+  ---
+
+  # Principio Arquitectónico
+
+  Toda funcionalidad debe cumplir una regla:
+
+  "Nada puede depender de una implementación concreta cuando pueda depender de un
+  contrato."
+
+  Los contratos permanecen.
+
+  Las implementaciones cambian.
+
+  Así el ecosistema podrá evolucionar durante muchos años sin romper
+  compatibilidad.
+
+  ---
+
+  # Objetivo Final
+
+  Construir el ecosistema de código abierto más modular, extensible y escalable
+  para trabajar con inteligencias artificiales, agentes y herramientas
+  especializadas, permitiendo que desarrolladores, diseñadores, investigadores,
+  músicos, creadores de contenido y cualquier otra profesión compartan un mismo
+  núcleo tecnológico mediante aplicaciones y plugins especializados.
+   Hay una idea adicional que creo que haría a Piston realmente diferente: en
+  lugar de que Piston Gold, Piston Music o Piston Video sean programas
+  completamente independientes, podrías tratarlos como productos construidos sobre
+  la misma plataforma. Es decir, compartirían el mismo Piston Core, el mismo
+  sistema de agentes, el mismo gestor de plugins y el mismo traductor universal,
+  diferenciándose solo por los módulos y herramientas que cargan. Eso reduciría
+  muchísimo el mantenimiento y permitiría que una mejora en el núcleo beneficie
+  automáticamente a todo el ecosistema.,go?
+
+
+• Sí: esta visión refuerza la recomendación. Piston debe ser una plataforma común
+  con productos especializados como composiciones, no aplicaciones independientes.
+  Tomo tu mensaje como aprobación para cerrar la decisión arquitectónica y
+  presentar el árbol del monorepo, sin crear aún carpetas ni archivos. Usaré una
+  guía de análisis de requisitos para convertir esta visión en límites claros de
+  módulos y paquetes.
+
+✔ You approved codex to run Get-Content -LiteralPath 'C:
+  \Users\USER\.codex\skills\requirements-analyst\SK... this time
+
+• Ran Get-Content -LiteralPath 'C:
+  │ \Users\USER\.codex\skills\requirements-analyst\SKILL.md' -Raw
+  └ ---
+    name: requirements-analyst
+    … +46 lines (ctrl + t to view transcript)
+    - Read `references/spec-template.md` for the standard output skeleton.
+
+
+✔ You approved codex to run Get-Content -LiteralPath 'C:
+  \Users\USER\.codex\skills\requirements-analyst\re... this time
+
+• Ran Get-Content -LiteralPath 'C:
+  │ \Users\USER\.codex\skills\requirements-analyst\references\spec-template.md'
+  │ -Raw
+  └ # Spec Template
+
+    … +39 lines (ctrl + t to view transcript)
+    - qa-reviewer
+
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• Sí. La visión confirma la decisión: Piston Code, Gold, Music y Video serán
+  composiciones del mismo Piston Core, no programas con lógicas duplicadas. Cada
+  producto carga su perfil, agentes, plugins, políticas y experiencia de usuario;
+  el núcleo permanece común.
+
+  ## Árbol propuesto del monorepo
+
+  piston-code-agent/
+  ├─ apps/
+  │  ├─ desktop/                 # Host visual único para los productos Piston
+  │  ├─ cli/                     # Interfaz de terminal y automatización
+  │  ├─ web/                     # Cliente web/administración remota futura
+  │  └─ gateway/                 # API remota opcional; no requerida para el inicio
+  │
+  ├─ products/
+  │  ├─ piston-code/             # Composición para desarrollo de software
+  │  ├─ piston-gold/             # Composición para documentos y automatización
+  │  ├─ piston-music/            # Composición para audio y MIDI
+  │  ├─ piston-video/            # Composición para video
+  │  └─ product-sdk/             # Contratos para crear nuevos productos Piston
+  │
+  ├─ packages/
+  │  ├─ contracts/               # Piston Protocol: tipos, eventos y esquemas
+  públicos
+  │  ├─ kernel/                  # Sesiones, registro de capacidades y ciclo de
+  vida
+  │  ├─ agent-runtime/           # Ejecución, coordinación y composición de agentes
+  │  ├─ model-gateway/           # Puerto común para modelos y proveedores de IA
+  │  ├─ tool-runtime/            # Registro, ejecución y control de herramientas
+  │  ├─ universal-translator/    # Traduce MCP, CLI, REST, gRPC, SDK, archivos,
+  etc.
+  │  ├─ context/                 # Construcción, selección y presupuesto de
+  contexto
+  │  ├─ memory/                  # Memoria de sesión, semántica y de largo plazo
+  │  ├─ workspace/               # Archivos, proyectos, artefactos y espacios de
+  trabajo
+  │  ├─ policy/                  # Permisos, aprobaciones y reglas de ejecución
+  │  ├─ plugin-sdk/              # API pública para desarrolladores de plugins
+  │  ├─ plugin-host/             # Descubrimiento, carga, compatibilidad y
+  aislamiento
+  │  ├─ storage/                 # Puertos de persistencia; sin imponer una base de
+  datos
+  │  ├─ observability/           # Logs, trazas, métricas y auditoría
+  │  ├─ client-sdk/              # SDK para que apps y clientes externos usen Core
+  │  └─ ui-kit/                  # Componentes visuales compartidos, sin lógica de
+  dominio
+  │
+  ├─ extensions/
+  │  ├─ official/
+  │  │  ├─ models/               # Adaptadores oficiales: OpenAI, Anthropic,
+  locales, etc.
+  │  │  ├─ protocols/            # Conectores MCP, CLI, REST, GraphQL, WebSocket,
+  gRPC
+  │  │  ├─ tools/                # Git, terminal, archivos, navegador, documentos,
+  etc.
+  │  │  ├─ agents/               # Agentes reutilizables: planificador, editor,
+  revisor
+  │  │  └─ storage/              # Implementaciones de almacenamiento
+  │  └─ examples/                # Plugins de ejemplo y plantilla de terceros
+  │
+  ├─ configs/
+  │  ├─ typescript/              # Configuración TypeScript compartida
+  │  ├─ eslint/                  # Reglas de calidad compartidas
+  │  ├─ vitest/                  # Configuración de pruebas
+  │  └─ build/                   # Configuración de compilación y empaquetado
+  │
+  ├─ docs/
+  │  ├─ architecture/
+  │  │  ├─ ADR-0001.md           # Plataforma compartida y productos-composición
+  │  │  ├─ ADR-0002.md           # Piston Protocol y Traductor Universal
+  │  │  ├─ ADR-0003.md           # Sistema de plugins y aislamiento
+  │  │  └─ ADR-0004.md           # Límites del monorepo y dependencias
+  │  ├─ concepts/                # Agentes, capacidades, sesiones, plugins y
+  productos
+  │  ├─ guides/                  # Guías de uso e integración
+  │  └─ api/                     # Especificaciones de contratos públicos
+  │
+  ├─ tests/
+  │  ├─ contract/                # Compatibilidad entre contratos y extensiones
+  │  ├─ integration/             # Core + agentes + modelos + herramientas
+  │  ├─ e2e/                     # Flujos completos de usuario
+  │  └─ fixtures/                # Proyectos, respuestas y artefactos reproducibles
+  │
+  ├─ tooling/
+  │  ├─ scripts/                 # Automatización de desarrollo y publicación
+  │  └─ generators/              # Generadores de paquetes, productos y plugins
+  │
+  ├─ infra/
+  │  ├─ containers/              # Entornos aislados de ejecución
+  │  ├─ deployment/              # Despliegue futuro
+  │  └─ security/                # Perfiles y configuraciones de endurecimiento
+  │
+  ├─ README.md
+  ├─ package.json
+  ├─ pnpm-workspace.yaml
+  └─ turbo.json
+
+  ### Regla de dependencias
+
+  apps / products / extensions
+              ↓
+        client-sdk / plugin-sdk
+              ↓
+     kernel + contratos públicos
+              ↓
+  infraestructura intercambiable
+
+  Un producto nunca implementa agentes, modelos, memoria o permisos. Solo compone
+  capacidades existentes. Un agente nunca conoce MCP, REST o una CLI concreta:
+  habla únicamente con los contratos internos de Piston.
+
+  El Traductor Universal será el límite clave: los conectores de protocolo viven en
+  extensions/official/protocols, mientras packages/universal-translator los
+  convierte al Piston Protocol. Así se puede cambiar una API, herramienta o
+  proveedor sin reescribir agentes ni productos.
+
+  ### ADRs iniciales
+
+  Al crear la estructura, registraremos estas decisiones antes de implementar el
+  núcleo:
+
+  - ADR-0001: Piston como plataforma compartida y productos como composiciones.
+  - ADR-0002: Piston Protocol como contrato interno independiente de protocolos
+    externos.
+
+  - ADR-0003: Plugins mediante SDK versionado, permisos explícitos y aislamiento
+    progresivo.
+
+  - ADR-0004: Monorepo modular; sin microservicios obligatorios en la primera fase.
+
+  Objetivo: un núcleo único reutilizable por todos los productos.
+  Alcance actual: arquitectura y límites de paquetes; no se crea ningún archivo
+  aún.
+  No objetivo: implementar UI, modelos, plugins o infraestructura.
+  Riesgo principal: sobrediseñar el núcleo; se mitigará manteniendo contratos
+  pequeños y creando capacidades solo cuando un producto real las necesite.
+  Criterio de aceptación: cualquier producto futuro puede añadirse como composición
+  sin modificar kernel, agent-runtime ni los contratos existentes.
+
+  Si apruebas este árbol, la siguiente etapa puede crear solo la estructura vacía,
+  los cuatro ADRs y la configuración raíz necesaria; todavía sin implementar
+  paquetes internos.
+
+─ Worked for 1m 07s ───────────────────────────────────────────────────────────────
+
+
+› Antes de crear la estructura física del monorepo, revisa esta arquitectura como
+  si fueras un comité de arquitectos de software con experiencia en proyectos como
+  VS Code, Kubernetes, Docker, IntelliJ Platform y OpenHands. Intenta encontrar
+  debilidades, módulos innecesarios, dependencias circulares, riesgos de
+  escalabilidad y oportunidades de simplificación. Si detectas problemas, propón
+  una versión 2 de la arquitectura antes de crear cualquier carpeta. Solo cuando
+  la arquitectura sea suficientemente estable, inicia la implementación física de
+  la estructura vacía del monorepo.
+
+
+• Haré una revisión de diseño previa a cualquier creación física. Aplicaré una
+  auditoría de calidad arquitectónica y contrastaré los principios con fuentes
+  primarias de VS Code, Kubernetes, Docker, IntelliJ y OpenHands. Si el diseño
+  necesita cambios, presentaré una versión 2 y me detendré para tu aprobación; no
+  crearé carpetas en esta etapa.
+
+✔ You approved codex to run Get-Content -LiteralPath 'C:
+  \Users\USER\.codex\skills\qa-reviewer\SKILL.md' -... this time
+
+• Ran Get-Content -LiteralPath 'C:\Users\USER\.codex\skills\qa-reviewer\SKILL.md'
+  │ -Raw; Get-Content -LiteralPath 'C:
+  │ \Users\USER\.agents\skills\agent-reach\SKILL.md' -Raw
+  └ ---
+    name: qa-reviewer
+    … +184 lines (ctrl + t to view transcript)
+    ç”¨æˆ·åªéœ€æä¾› cookiesï¼Œå…¶ä»–é…ç½®ç”± agent å®Œæˆã€‚
+
+
+✔ You approved codex to run Get-Content -LiteralPath 'C:
+  \Users\USER\.codex\skills\qa-reviewer\references\... this time
+
+• Ran Get-Content -LiteralPath 'C:
+  │ \Users\USER\.codex\skills\qa-reviewer\references\review-checklist.md' -Raw;
+  │ Get-Content -LiteralPath 'C:
+  │ … +1 lines
+  └ # Review Checklist
+
+    … +76 lines (ctrl + t to view transcript)
+    | context7 | my-mcp-tools | æŸ¥æŠ€æœ¯æ–‡æ¡£ |
+
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• Usaré fuentes oficiales para extraer principios transferibles: modelo de
+  extensiones de VS Code e IntelliJ, plano de control de Kubernetes, aislamiento de
+  Docker y separación cliente/servidor de OpenHands. La revisión busca reducir el
+  sistema inicial, no ampliar su alcance.
+
+◦ Searching the web
+
+• Searched the web for site:code.visualstudio.com/api extension host architecture
+  VS Code official ...
+
+• Searching the web
+
+• Searched the web for site:kubernetes.io/docs/concepts/overview/components/
+  Kubernetes components control plane architecture ...
+
+✔ You approved codex to run agent-reach check-update; $project = 'C:
+  \Users\USER\Desktop\HERRAMIENTAS DE I... this time
+
+• Ran agent-reach check-update; $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE
+  │ IA\Proyectos\piston program'; git -C $project status --short
+  └ 当前版本: v1.5.0
+    ✅ 已是最新版本
+    … +4 lines (ctrl + t to view transcript)
+    ?? package.json
+    ?? pnpm-workspace.yaml
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• ## Veredicto
+
+  Cambios solicitados. La dirección es correcta, pero el árbol anterior tenía
+  demasiados paquetes “fundacionales” para un repositorio vacío. Si se implementara
+  así, crearíamos complejidad antes de tener el primer flujo real de Piston Code.
+
+  No se creó ningún archivo ni carpeta durante la revisión.
+
+  ## Hallazgos críticos
+
+  1. kernel sería un “god module”.
+     Sesiones, eventos, permisos, configuración, plugins, memoria y comunicación no
+     deben vivir bajo una misma responsabilidad. El núcleo debe coordinar; no
+     convertirse en dueño de todos los dominios.
+
+  2. El “Traductor Universal” estaba sobredimensionado.
+     Traducir MCP, CLI, REST, gRPC, archivos, formatos y SDKs en un único
+     componente produciría una abstracción poco precisa y acoplada. Debe traducir
+     únicamente hacia el contrato de capacidades de Piston; cada protocolo externo
+     conserva su adaptador independiente.
+
+  3. context, memory, storage y workspace se solapaban.
+     Su separación inicial generaría dependencias circulares previsibles: agente →
+     contexto → memoria → almacenamiento → sesión → agente. No deben nacer como
+     paquetes autónomos hasta existir casos de uso que justifiquen sus fronteras.
+
+  4. model-gateway y tool-runtime no son núcleo.
+     Un proveedor de modelo y una herramienta son dos clases de capacidad. Deben
+     entrar por el mismo mecanismo extensible, no como subsistemas privilegiados.
+
+  5. products necesitaba ser “product packs”, no aplicaciones.
+     Piston Gold, Music y Video no deben tener lógica propia ni replicar un host.
+     Serán manifiestos de composición: agentes, plugins, políticas, flujos y UX
+     habilitada.
+
+  6. Faltaba separar plano de control y plano de ejecución.
+     Los agentes autónomos no deben ejecutarse dentro de la UI ni bloquearla. VS
+     Code está migrando hacia un Agent Host dedicado que conserva sesiones
+     independientemente de los clientes; es un principio muy aplicable a Piston. VS
+     Code Agent Host
+     (https://code.visualstudio.com/docs/agents/concepts/agent-host)
+
+  7. El sistema de plugins necesita ubicación, activación y permisos desde el
+     contrato.
+     VS Code aísla extensiones, las activa de forma perezosa y distingue ejecución
+     local, web o remota. IntelliJ exige declarar dependencias y módulos
+     opcionales. Piston debe adoptar esos principios, sin copiar sus APIs. VS Code
+     Extension Host
+     (https://code.visualstudio.com/api/advanced-topics/extension-host) · IntelliJ
+     Modular Plugins
+     (https://plugins.jetbrains.com/docs/intellij/modular-plugins.html)
+
+  8. El núcleo remoto debe exponerse por una única frontera.
+     Si llega a existir servidor remoto, los clientes y nodos no deben hablar entre
+     sí libremente. Un API central tipado evita acoplamientos laterales, como el
+     patrón hub-and-spoke de Kubernetes. Kubernetes control-plane communication
+     (https://kubernetes.io/docs/concepts/architecture/control-plane-node-communication/)
+
+  ## Arquitectura V2 recomendada
+
+  Clientes y product packs
+          │
+     Piston Client Protocol
+          │
+  ┌──────────────────────────────┐
+  │ Piston Control Plane         │
+  │ - sesiones                   │
+  │ - registro de capacidades    │
+  │ - autorización/políticas     │
+  │ - journal de eventos         │
+  └──────────────┬───────────────┘
+                 │
+       ┌─────────┴─────────┐
+       │                   │
+  Piston Agent Host   Piston Extension Host
+  (agentes largos)    (plugins y adaptadores)
+       │                   │
+       └──── Piston Capability Protocol ────┐
+                                              │
+                           modelos · herramientas · MCP · CLI · REST · archivos
+
+  - Control Plane: gobierna sesiones, permisos, registro de capacidades y eventos.
+    No ejecuta directamente agentes ni plugins.
+
+  - Agent Host: proceso independiente que ejecuta agentes y puede situarse junto al
+    workspace local o remoto.
+
+  - Extension Host: carga plugins bajo manifiesto, permisos y activación perezosa.
+    La ejecución aislada en worker/proceso será una evolución posterior.
+
+  - Piston Capability Protocol: contrato interno único para solicitar capacidades y
+    recibir resultados/eventos. Es el alcance correcto del Traductor Universal.
+
+  - Adaptadores: MCP, CLI, REST, GraphQL, gRPC y SDKs se implementan como
+    extensiones; no contaminan el Core.
+
+  - Product packs: Piston Code, Gold, Music y Video son configuraciones
+    declarativas sobre la plataforma, no copias de la plataforma.
+
+  Esto también mantiene la separación cliente/daemon que hace portátil a Docker y
+  evita que la interfaz se convierta en motor de ejecución. Arquitectura
+  cliente-servidor de Docker (https://docs.docker.com/get-started/docker-overview/)
+  OpenHands sigue el mismo límite: la UI no ejecuta las acciones del agente
+  directamente. OpenHands architecture
+  (https://github.com/OpenHands/OpenHands/blob/main/docs/architecture.md)
+
+  ## Monorepo V2: conjunto inicial reducido
+
+  apps/
+    desktop/                 # Host visual inicial
+    cli/                     # Host de terminal y automatización
+
+  product-packs/
+    piston-code/             # Selección declarativa de capacidades para software
+    piston-gold/             # Reservado; sin lógica de documentos aún
+    piston-music/            # Reservado
+    piston-video/            # Reservado
+
+  packages/
+    protocol/                # Contratos, esquemas, eventos y manifiestos; sin
+    dependencias
+    core/                    # Control Plane: sesiones, capacidades y políticas
+    agent-host/              # Ejecución independiente de agentes
+    extension-api/           # API estable para plugins y adaptadores
+    extension-host/          # Descubrimiento, activación y ciclo de vida de
+    extensiones
+    client-sdk/              # Cliente tipado para apps y clientes externos
+
+  extensions/
+    built-in/                # Futuras extensiones mantenidas por Piston
+    examples/                # Plantillas y pruebas de compatibilidad para terceros
+
+  docs/
+    architecture/            # ADRs
+    concepts/
+    guides/
+
+  tests/
+    contract/                # Compatibilidad protocol/core/plugins
+    integration/
+    e2e/
+
+  Se difieren explícitamente memory, context, storage, workspace, ui-kit, gateway,
+  infra, proveedores de IA y conectores concretos. Se añadirán cuando un flujo real
+  requiera una frontera estable.
+
+  ## ADRs que deben existir antes de implementar lógica
+
+  - ADR-0001: Plataforma compartida y product packs.
+  - ADR-0002: Control Plane, Agent Host y Extension Host separados.
+  - ADR-0003: Piston Capability Protocol y adaptadores externos.
+  - ADR-0004: Plugins con manifiestos, activación perezosa y permisos.
+  - ADR-0005: Dependencias unidireccionales y prohibición de imports entre
+    extensiones.
+
+  ### Riesgo residual
+
+  El principal riesgo es definir el protocolo demasiado pronto. Lo mitigaremos con
+  un contrato mínimo, versionado semántico y pruebas de compatibilidad; no se
+  añadirá una capacidad al protocolo sin un consumidor real.
+
+  Siguiente paso recomendado: aprobar la arquitectura V2. Entonces crearé la
+  estructura física vacía, los ADRs iniciales y la configuración raíz, sin
+  implementar funcionalidades.
+
+─ Worked for 1m 44s ───────────────────────────────────────────────────────────────
+
+
+› # Revisión Arquitectónica Final (Architecture Review V2)
+
+  Antes de crear cualquier carpeta o archivo del monorepo, quiero realizar una
+  revisión arquitectónica completa.
+
+  Actúa como un comité formado por arquitectos senior con experiencia en proyectos
+  como:
+
+  * VS Code
+  * IntelliJ Platform
+  * Kubernetes
+  * Docker
+  * Linux
+  * LLVM
+  * OpenHands
+  * Continue
+  * Cline
+  * Roo Code
+
+  Tu objetivo no es confirmar la arquitectura existente.
+
+  Tu objetivo es intentar romperla.
+
+  Analiza la arquitectura propuesta desde un punto de vista crítico.
+
+  Busca cualquier problema que pueda aparecer dentro de uno, tres o incluso diez
+  años de evolución del proyecto.
+
+  ## Analiza especialmente
+
+  * responsabilidades mal definidas;
+  * módulos demasiado grandes;
+  * módulos innecesarios;
+  * módulos que deberían dividirse;
+  * dependencias circulares;
+  * dependencias ocultas;
+  * violaciones de la arquitectura limpia;
+  * problemas de escalabilidad;
+  * problemas de mantenibilidad;
+  * problemas de extensibilidad;
+  * posibles cuellos de botella;
+  * exceso de abstracción;
+  * exceso de complejidad;
+  * duplicación de responsabilidades;
+  * riesgos para el sistema de plugins;
+  * riesgos para el Traductor Universal;
+  * riesgos para el sistema de agentes;
+  * riesgos para futuras aplicaciones del ecosistema.
+
+  ## Evalúa también
+
+  * facilidad para incorporar nuevos modelos de IA;
+  * facilidad para soportar nuevos protocolos;
+  * facilidad para soportar nuevas profesiones;
+  * facilidad para soportar nuevos productos del ecosistema;
+  * facilidad para trabajar completamente offline;
+  * facilidad para funcionar únicamente con modelos locales;
+  * facilidad para funcionar únicamente con modelos en la nube;
+  * facilidad para combinar ambos.
+
+  ## Revisión del núcleo
+
+  Analiza si los siguientes módulos están correctamente definidos o si deben
+  fusionarse, dividirse o cambiar de responsabilidad:
+
+  * kernel
+  * contracts
+  * agent-runtime
+  * orchestration
+  * reasoning
+  * model-gateway
+  * tool-runtime
+  * universal-translator
+  * context
+  * memory
+  * workspace
+  * policy
+  * plugin-sdk
+  * plugin-host
+  * capability-registry
+  * event-bus
+  * scheduler
+  * storage
+  * observability
+  * client-sdk
+  * ui-kit
+
+  Si alguno de estos módulos no aporta valor real, elimínalo.
+
+  Si falta alguno imprescindible, propón su incorporación.
+
+  ## Revisión del ecosistema
+
+  Verifica si la separación entre:
+
+  * apps
+  * products
+  * extensions
+  * packages
+  * configs
+  * tooling
+  * infra
+  * docs
+  * tests
+
+  es la más adecuada o si existe una organización mejor.
+
+  ## ADR
+
+  Si propones cambios importantes, actualiza también los ADR correspondientes y
+  explica por qué cambia la decisión arquitectónica.
+
+  ## Resultado esperado
+
+  Entrega:
+
+  1. Lista de problemas encontrados.
+  2. Riesgos a corto plazo.
+  3. Riesgos a largo plazo.
+  4. Oportunidades de simplificación.
+  5. Oportunidades de mejora.
+  6. Arquitectura V2 recomendada.
+  7. Justificación técnica de cada cambio.
+  8. Árbol definitivo del monorepo.
+  9. Reglas de dependencia entre módulos.
+  10. Criterios que deberán cumplirse para considerar la arquitectura estable.
+
+  No implementes todavía ningún paquete.
+
+  No crees todavía ninguna carpeta.
+
+  Solo cuando la arquitectura sea suficientemente estable y esté preparada para
+  evolucionar durante muchos años, solicitaremos la autorización para comenzar la
+  implementación física del monorepo.
+
+
+• Haré una revisión final hostil, no una validación complaciente. Contrastaré los
+  principios con documentación primaria de plataformas extensibles, sistemas de
+  control y toolchains; como solicitaste, el resultado será solo diseño, ADRs
+  propuestos y criterios de estabilidad, sin tocar el repositorio.
+
+• Searching the web
+
+• Searched the web for site:docs.kernel.org Linux kernel subsystem maintainers
+  stable userspace API documentation ...
+
+✔ You approved codex to run agent-reach check-update this time
+
+• Ran agent-reach check-update
+  └ 当前版本: v1.5.0
+    ✅ 已是最新版本
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• ## Veredicto
+
+  Arquitectura V2 aprobable con cambios. La visión de Piston es sólida, pero la
+  estructura anterior todavía trataba demasiadas ideas como paquetes
+  independientes. La versión final debe reducir el núcleo, convertir “Traductor
+  Universal” en un límite de adaptadores y separar coordinación, ejecución de
+  agentes y ejecución de extensiones.
+
+  No he creado ni modificado archivos.
+
+  ## 1. Problemas encontrados
+
+  - Núcleo sobredimensionado: kernel acumulaba sesiones, eventos, permisos, plugins
+    y configuración. Eso acabaría como un “god module”.
+
+  - “Traductor Universal” ambiguo: no debe traducir “todo”: formatos de video, PDF
+    o MIDI no son protocolos de herramientas. Su misión debe limitarse a adaptar
+    capacidades externas al protocolo interno.
+
+  - Sesgo hacia desarrollo de software: workspace no representa bien documentos,
+    música, video o investigación. Debe convertirse en un concepto más general de
+    recursos y artefactos.
+
+  - Separación prematura: context, memory, storage, scheduler, event-bus, tool-
+    runtime y observability como paquetes iniciales generarían interfaces vacías y
+    dependencias artificiales.
+
+  - model-gateway privilegiado: un modelo es una capacidad, igual que un navegador,
+    compilador o conector MCP. No necesita un subsistema central especial.
+
+  - Productos potencialmente duplicados: Piston Gold, Music y Video deben ser
+    paquetes declarativos de composición, no apps con runtime propio.
+
+  - Plugins sin modelo de ubicación: un plugin puede requerir UI, workspace local,
+    ejecución remota o navegador. El manifiesto debe declarar dónde puede correr,
+    capacidades, activación y permisos. VS Code ilustra bien esta separación e
+    inicio perezoso. VS Code Extension Host
+    (https://code.visualstudio.com/api/advanced-topics/extension-host)
+
+  - Falta un límite explícito de credenciales y confianza: un plugin no puede
+    recibir secretos ni permisos por el simple hecho de declararlos.
+
+  - Riesgo de dependencia circular: agente → contexto → memoria → almacenamiento →
+    sesión → agente.
+
+  - Exceso de infraestructuras futuras: gateway, web, infra y servicios remotos no
+    deben condicionar la primera versión local.
+
+  ## 2. Riesgos a corto plazo
+
+  - Diseñar demasiados contratos antes de tener un flujo completo de Piston Code.
+  - Convertir el bus de eventos en mensajería genérica sin semántica ni
+    persistencia.
+
+  - Ejecutar plugins en el mismo proceso sin límites de permisos, bloqueos o
+    consumo.
+
+  - Intentar resolver scheduling, colaboración remota y multiusuario antes de
+    validar sesiones locales.
+
+  - Confundir hooks de plugins con mecanismo de seguridad: la política debe
+    imponerse en el host, no ser opcional para el plugin.
+
+  ## 3. Riesgos a largo plazo
+
+  - Congelación del protocolo: si protocol absorbe detalles de cada producto, cada
+    cambio romperá plugins.
+
+  - Supply chain de plugins: paquetes maliciosos, dependencias transitivas, robo de
+    secretos y ejecución arbitraria.
+
+  - Crecimiento de sesiones: logs, artefactos y contexto pueden convertirse en el
+    principal coste de disco y rendimiento.
+
+  - Product packs incompatibles: una funcionalidad de Gold o Music no debe forzar
+    dependencias pesadas sobre Code.
+
+  - Aislamiento insuficiente: los plugins de confianza y los de terceros no pueden
+    tener el mismo nivel de acceso.
+
+  - Complejidad distribuida anticipada: un control plane remoto solo se justifica
+    cuando existan varios clientes, sesiones persistentes o automatizaciones sin
+    cliente. El patrón hub–spoke es útil entonces, no antes. Arquitectura hub–spoke
+    de Cline (https://docs.cline.bot/sdk/architecture/hub-spoke)
+
+  ## 4. Oportunidades de simplificación
+
+  - Eliminar paquetes iniciales para reasoning, orchestration, model-gateway, tool-
+    runtime, context, memory, workspace, storage, scheduler, event-bus,
+    observability y ui-kit.
+
+  - Mantener un único contrato de capacidad: modelos, herramientas, almacenamiento,
+    recursos, conectores y motores externos son implementaciones de capacidades.
+
+  - Cambiar products/ por product-packs/: manifiestos declarativos, agentes
+    habilitados, extensiones permitidas y políticas.
+
+  - Mantener pruebas unitarias junto a cada paquete; reservar tests/ raíz para
+    contratos, integración y E2E.
+
+  - Posponer UI compartida hasta que exista una segunda interfaz real que la
+    necesite.
+
+  ## 5. Oportunidades de mejora
+
+  - Adoptar tres roles explícitos: cliente, control plane y worker de agentes. Los
+    clientes observan y controlan; el control plane coordina; los workers ejecutan.
+    VS Code también está separando agentes autónomos en un Agent Host dedicado. VS
+    Code Agent Host (https://code.visualstudio.com/docs/agents/concepts/agent-host)
+
+  - Tratar extensiones como módulos con manifiesto versionado, dependencias
+    declaradas y carga opcional. IntelliJ demuestra el valor de dependencias
+    explícitas y módulos opcionales. IntelliJ Modular Plugins
+    (https://plugins.jetbrains.com/docs/intellij/modular-plugins.html)
+
+  - Establecer un único API de control; los workers y clientes no se comunican
+    entre sí directamente. Es el patrón que evita acoplamientos laterales en
+    Kubernetes. Kubernetes control plane
+    (https://kubernetes.io/docs/concepts/architecture/control-plane-node-communication/)
+
+  - Separar el cliente de la ejecución, como Docker separa cliente y daemon.
+    Arquitectura Docker (https://docs.docker.com/get-started/docker-overview/)
+
+  - Exigir mantenimiento y compatibilidad de extensiones como responsabilidad
+    explícita de sus autores, en vez de añadir extensiones sin dueño. Guía de
+    mantenedores Linux
+    (https://docs.kernel.org/maintainer/feature-and-driver-maintainers.html)
+
+  ## 6. Arquitectura V2 definitiva
+
+  Apps / CLI / product packs
+             │
+        Client Protocol
+             │
+  ┌─────────────────────────────┐
+  │ Piston Control Plane        │
+  │ sesiones · permisos         │
+  │ registro · aprobaciones     │
+  │ journal de eventos          │
+  └──────────────┬──────────────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+  Piston Agent Worker   Piston Extension Host
+  agentes y flujos      plugins y adaptadores
+        │                 │
+        └──── Capability Protocol ────┐
+                                       │
+   modelos · MCP · CLI · REST · SDK · recursos · artefactos
+
+  El Capability Protocol es el Traductor Universal correctamente delimitado:
+  normaliza solicitud, resultado, evento, artefacto, permiso y error. No interpreta
+  semántica de PDF, audio o video; esas son capacidades de extensiones
+  especializadas.
+
+  ### Evaluación de módulos solicitados
+
+   Módulo                  Decisión V2
+  ━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   kernel                  Renombrar a control-plane; coordina, no ejecuta.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   contracts               Conservar como protocol; sin dependencias internas.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   agent-runtime           Conservar como agent-worker; proceso/límite de
+                           ejecución.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   orchestration           Submódulo de control-plane, no paquete.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   reasoning               Eliminar del núcleo; estrategia de cada agente o
+                           extensión.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   model-gateway           Eliminar como paquete; modelos son capacidades/
+                           adaptadores.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   tool-runtime            Eliminar; el Extension Host ejecuta capacidades
+                           autorizadas.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   universal-translator    Convertir en contrato y adaptadores, no en megamódulo.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   context                 Empieza dentro de agent-worker; extraer solo con casos
+                           reales.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   memory                  Capacidad de conocimiento/estado, no núcleo.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   workspace               Sustituir por recursos y artefactos, agnóstico de
+                           profesión.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   policy                  Submódulo obligatorio del control plane y del broker de
+                           capacidades.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   plugin-sdk              Renombrar a extension-api; superficie pública pequeña.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   plugin-host             Conservar como extension-host, separado del worker.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   capability-registry     Submódulo del control plane.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   event-bus               Sustituir por journal de eventos tipado; no bus
+                           genérico.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   scheduler               Aplazar; futura capacidad de automatización.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   storage                 Puerto de persistencia dentro del protocolo; no paquete
+                           inicial.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   observability           Instrumentación y eventos estándar en protocol;
+                           exportadores después.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   client-sdk              Conservar; única dependencia de apps hacia la
+                           plataforma.
+  ──────────────────────  ─────────────────────────────────────────────────────────
+   ui-kit                  Aplazar hasta tener dos clientes visuales reales.
+
+  Módulos nuevos imprescindibles:
+
+  - identity-and-secrets como capacidad protegida: identidad, credenciales,
+    consentimiento y vault; nunca accesible directamente por plugins.
+
+  - Artefactos en protocol: representación común de archivos, documentos, audio,
+    imágenes, resultados y referencias.
+
+  - Compatibilidad de extensiones: versiones de API, capacidades requeridas,
+    permisos, ubicación de ejecución y activación.
+
+  Cline valida el valor de capas dependientes hacia abajo —contratos compartidos,
+  runtime de agentes, proveedores y core—, pero Piston debe evitar que ese core
+  crezca hasta incluir todo. Cline package architecture
+  (https://docs.cline.bot/sdk/architecture/overview)
+
+  ## 7. Justificación técnica
+
+  - Nuevos modelos: se añaden como extensiones que implementan ModelCapability;
+    soporte local, nube o híbrido se decide por política y disponibilidad, sin
+    cambiar agentes.
+
+  - Nuevos protocolos: se añaden como adaptadores del Capability Protocol. MCP no
+    recibe trato especial; es un adaptador más.
+
+  - Nuevas profesiones: añaden product packs y extensiones de dominio, sin
+    modificar el control plane.
+
+  - Offline: cliente, control plane, worker, modelos locales y extensiones pueden
+    correr en una máquina sin gateway remoto.
+
+  - Solo nube: un adaptador de modelo remoto y un gestor de secretos bastan.
+  - Híbrido: la política elige modelo local o nube según permiso, coste,
+    conectividad, capacidad y datos sensibles.
+
+  - Escalabilidad futura: el límite cliente/control plane/worker permite pasar de
+    proceso local a daemon o servicio remoto sin alterar el protocolo. OpenHands
+    también mantiene la UI fuera de la ejecución y del sandbox. OpenHands
+    architecture
+    (https://github.com/OpenHands/OpenHands/blob/main/docs/architecture.md)
+
+  ## 8. Árbol definitivo del monorepo
+
+  piston-code-agent/
+  ├─ apps/
+  │  ├─ desktop/                   # Cliente visual inicial
+  │  └─ cli/                       # Cliente de terminal y automatización local
+  │
+  ├─ product-packs/
+  │  ├─ piston-code/               # Manifiesto y composición para software
+  │  ├─ piston-gold/               # Composición futura para documentos
+  │  ├─ piston-music/              # Composición futura para música
+  │  └─ piston-video/              # Composición futura para video
+  │
+  ├─ packages/
+  │  ├─ protocol/                  # Contratos, versiones, artefactos y manifiestos
+  │  ├─ control-plane/             # Sesiones, políticas, registro y journal
+  │  ├─ agent-worker/              # Ejecución aislable de agentes
+  │  ├─ extension-api/             # SDK público de extensiones
+  │  ├─ extension-host/            # Carga, activación y ciclo de vida de
+  extensiones
+  │  ├─ client-sdk/                # API tipada consumida por apps
+  │  └─ testkit/                   # Fixtures y verificadores para extensiones
+  │
+  ├─ extensions/
+  │  └─ built-in/                  # Extensiones oficiales cuando existan
+  │
+  ├─ examples/
+  │  ├─ extensions/                # Ejemplos de terceros
+  │  └─ product-packs/             # Ejemplos de composiciones
+  │
+  ├─ configs/
+  │  ├─ typescript/
+  │  ├─ lint/
+  │  ├─ test/
+  │  └─ build/
+  │
+  ├─ tooling/
+  │  ├─ scripts/
+  │  └─ generators/
+  │
+  ├─ docs/
+  │  ├─ architecture/
+  │  ├─ concepts/
+  │  ├─ guides/
+  │  └─ api/
+  │
+  ├─ tests/
+  │  ├─ contract/
+  │  ├─ integration/
+  │  └─ e2e/
+  │
+  └─ ops/                          # Contenedores/despliegue solo cuando haya
+  servicios
+
+  ops/ no será workspace ni requisito inicial; evita convertir infraestructura
+  futura en dependencia actual.
+
+  ## 9. Reglas de dependencia
+
+  protocol                 → no depende de paquetes Piston
+  extension-api            → protocol
+  client-sdk               → protocol
+  control-plane            → protocol
+  agent-worker             → protocol + client-sdk
+  extension-host           → protocol + extension-api + client-sdk
+  apps                     → client-sdk + product-packs
+  product-packs            → protocol únicamente
+  extensions               → extension-api + protocol
+
+  Reglas adicionales:
+
+  - Ninguna app importa control-plane, agent-worker o extensiones directamente.
+  - Ninguna extensión importa otra extensión; declara capacidades requeridas en el
+    manifiesto.
+
+  - protocol no importa implementaciones.
+  - El control plane no llama código de plugin en proceso propio.
+  - Toda acción con archivos, red, procesos o secretos pasa por autorización del
+    control plane.
+
+  - Los eventos públicos son versionados, tipados y con dueño; no existe un canal
+    libre de eventos.
+
+  - Los unit tests viven junto al módulo; tests/contract protege compatibilidad
+    pública.
+
+  ## 10. Criterios de estabilidad
+
+  La arquitectura será estable para iniciar la estructura física cuando se cumpla
+  lo siguiente:
+
+  - Cada paquete tiene una responsabilidad de una frase y dependencias permitidas.
+  - El Capability Protocol cubre solo capacidades transversales, no semántica de
+    productos.
+
+  - Un producto puede añadirse como product pack sin alterar el core.
+  - Un modelo local, uno en nube y un conector MCP pueden incorporarse como
+    extensiones.
+
+  - Un plugin sin permisos no puede leer secretos, archivos ni ejecutar procesos.
+  - Una sesión puede continuar aunque cierre un cliente.
+  - El primer flujo local funciona sin servicios remotos: CLI → control plane →
+    agent worker → capacidad.
+
+  - Cada decisión de frontera queda registrada en ADR antes de implementar lógica.
+
+  ### ADRs propuestos
+
+  No los he creado por tu instrucción, pero la implementación física debe comenzar
+  con:
+
+  - ADR-0001: Piston como plataforma compartida y product packs.
+  - ADR-0002: Separación de cliente, control plane y agent worker.
+  - ADR-0003: Capability Protocol y adaptadores externos.
+  - ADR-0004: Extension Host, permisos, activación y compatibilidad.
+  - ADR-0005: Recursos y artefactos en lugar de un workspace centrado en código.
+  - ADR-0006: Dependencias unidireccionales y política anti-ciclos.
+
+  La arquitectura V2 ya es suficientemente estable para crear la estructura vacía.
+  Si la apruebas, iniciaré la implementación física mínima: directorios V2, ADRs,
+  configuración de workspace y validación, sin código funcional todavía.
+
+─ Worked for 2m 33s ───────────────────────────────────────────────────────────────
+
+
+› # Piston Code Agent — Inicio de la Implementación de la Fase 1
+
+  La arquitectura ha sido aprobada.
+
+  A partir de este momento comienza la implementación de la **Fase 1**.
+
+  ## Objetivo
+
+  Construir la infraestructura profesional del proyecto.
+
+  Esta fase NO implementa todavía inteligencia artificial, agentes, plugins
+  funcionales, modelos, IDE ni herramientas.
+
+  El objetivo es dejar un monorepo completamente preparado para soportar las
+  siguientes fases.
+
+  ---
+
+  # Principios
+
+  Todo lo que construyas deberá cumplir:
+
+  * Arquitectura limpia.
+  * SOLID.
+  * Modularidad.
+  * Bajo acoplamiento.
+  * Alta cohesión.
+  * Desarrollo orientado por contratos.
+  * Escalabilidad.
+  * Extensibilidad.
+  * Código preparado para producción.
+
+  No escribas código temporal ni soluciones rápidas.
+
+  Todo deberá quedar preparado para un proyecto que pueda mantenerse durante
+  muchos años.
+
+  ---
+
+  # Implementación autorizada
+
+  Puedes crear:
+
+  * toda la estructura física del monorepo;
+  * todas las carpetas aprobadas;
+  * todos los `package.json`;
+  * `turbo.json`;
+  * configuraciones compartidas de TypeScript;
+  * ESLint;
+  * Prettier;
+  * Vitest;
+  * Docker;
+  * GitHub Actions;
+  * scripts de desarrollo;
+  * configuración raíz del workspace;
+  * ADR-0001 a ADR-0004;
+  * documentación inicial.
+
+  ---
+
+  # Restricciones
+
+  Todavía NO implementes:
+
+  * lógica del Kernel;
+  * Agent Runtime;
+  * Orchestration;
+  * Reasoning;
+  * Universal Translator;
+  * Plugin Host;
+  * Model Gateway;
+  * Memory;
+  * Workspace;
+  * Event Bus;
+  * Scheduler;
+  * productos;
+  * interfaces gráficas;
+  * modelos de IA;
+  * conectores externos.
+
+  Cada paquete debe contener únicamente el esqueleto mínimo necesario para
+  compilar correctamente.
+
+  ---
+
+  # Validaciones
+
+  Al finalizar:
+
+  1. Verifica que el monorepo compile correctamente.
+  2. Verifica que Turbo detecte todos los paquetes.
+  3. Verifica que TypeScript compile sin errores.
+  4. Verifica que ESLint funcione.
+  5. Verifica que Vitest pueda ejecutarse.
+  6. Verifica que Docker pueda construir el entorno si está disponible.
+  7. Verifica que GitHub Actions no tenga errores de sintaxis.
+
+  Si alguna herramienta no está disponible en el equipo, indícalo claramente y
+  continúa con el resto de la validación.
+
+  # Informe final
+
+  Cuando termines, entrega un informe con:
+
+
+
+✔ You approved codex to run Get-Content -LiteralPath 'C:
+  \Users\USER\.codex\skills\software-builder\SKILL.... this time
+
+• Ran Get-Content -LiteralPath 'C:
+  │ \Users\USER\.codex\skills\software-builder\SKILL.md' -Raw; Get-Content
+
+
+✔ You approved codex to run $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE
+  IA\Proyectos\piston program... this time
+
+• Ran $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+
+
+✔ You approved codex to run $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE
+  IA\Proyectos\piston program... this time
+
+• Ran $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  │ program'; $directories = @('apps/desktop/src','apps/cli/src','product-packs/
+  │ piston-code','product-packs/piston-gold','product-packs/
+  │ … +10 lines
+  └ DIRECTORIES_CREATED: 28
+
+───────────────────────────────────────────────────────────────────────────────────
+  de escritura.
+
+• Added Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\turbo.json (+8 -0)
+    1 +{
+    2 +  "$schema": "https://turbo.build/schema.json",
+    3 +  "tasks": {
+    4 +    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    5 +    "typecheck": { "dependsOn": ["^typecheck"], "outputs": [] },
+    6 +    "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] }
+    7 +  }
+    8 +}
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• El entorno permite añadir archivos con parches, pero falla de forma consistente
+  al leer un archivo existente para actualizarlo. Para no usar escritura manual,
+  crearé la nueva configuración como archivo temporal mediante parche y la copiaré
+  de forma exacta sobre el package.json raíz ya creado; conservaré el resto de los
+  cambios exclusivamente por parches.
+
+• Added Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\package.phase1.json
+(+33 -0)
+     1 +{
+     2 +  "name": "piston-code-agent",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "description": "A modular and extensible platform for AI-assisted coding
+        agents.",
+     6 +  "license": "MIT",
+     7 +  "packageManager": "pnpm@11.18.0",
+     8 +  "engines": {
+     9 +    "node": ">=24.0.0",
+    10 +    "pnpm": ">=11.0.0"
+    11 +  },
+    12 +  "scripts": {
+    13 +    "build": "turbo run build",
+    14 +    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck
+        && pnpm run test",
+    15 +    "format": "prettier --write .",
+    16 +    "format:check": "prettier --check .",
+    17 +    "lint": "eslint .",
+    18 +    "typecheck": "turbo run typecheck",
+
+
+
+✔ You approved codex to run New-Item -ItemType Directory -Force -Path 'C:
+  \Users\USER\Desktop\HERRAMIENTAS... this time
+
+• Ran New-Item -ItemType Directory -Force -Path 'C:\Users\USER\Desktop\HERRAMIENTAS
+  │ DE IA\Proyectos\piston program\.github\workflows' | Out-Null
+  └ (no output)
+
+• Edited 11 files (+139 -0)
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\.dockerignore (+9 -0)
+    1 +.git
+    2 +node_modules
+    3 +**/node_modules
+    4 +dist
+    5 +**/dist
+    6 +coverage
+    7 +**/coverage
+    8 +.turbo
+    9 +docs creacion
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\.github\workflows\ci.yml
+  (+37 -0)
+     1 +name: Continuous Integration
+     2 +
+     3 +on:
+     4 +  push:
+     5 +    branches: [main]
+     6 +  pull_request:
+     7 +    branches: [main]
+     8 +
+     9 +permissions:
+    10 +  contents: read
+    11 +
+    12 +jobs:
+    13 +  quality:
+    14 +    name: Quality gates
+    15 +    runs-on: ubuntu-latest
+    16 +    steps:
+    17 +      - name: Checkout
+    18 +        uses: actions/checkout@v4
+    19 +      - name: Set up Node.js
+    20 +        uses: actions/setup-node@v4
+    21 +        with:
+    22 +          node-version: 24
+    23 +          cache: pnpm
+    24 +      - name: Enable Corepack
+    25 +        run: corepack enable
+    26 +      - name: Set up pnpm
+    27 +        uses: pnpm/action-setup@v4
+    28 +        with:
+    29 +          version: 11.18.0
+    30 +      - name: Install dependencies
+    31 +        run: pnpm install --frozen-lockfile
+    32 +      - name: Run quality gates
+    33 +        run: pnpm run check
+    34 +      - name: Build workspace
+    35 +        run: pnpm run build
+    36 +      - name: Validate Docker build
+    37 +        run: docker build --tag piston-code-agent:ci .
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\.prettierignore (+5 -0)
+    1 +dist/
+    2 +coverage/
+    3 +node_modules/
+    4 +.turbo/
+    5 +pnpm-lock.yaml
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\.prettierrc.json (+6 -0)
+    1 +{
+    2 +  "singleQuote": true,
+    3 +  "trailingComma": "none",
+    4 +  "printWidth": 100,
+    5 +  "semi": true
+    6 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\Dockerfile (+15 -0)
+     1 +FROM node:24-bookworm-slim
+     2 +
+     3 +WORKDIR /workspace
+     4 +RUN corepack enable
+     5 +
+     6 +COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.js
+        on ./
+     7 +COPY .prettierrc.json .prettierignore eslint.config.mjs ./
+     8 +COPY apps ./apps
+     9 +COPY packages ./packages
+    10 +COPY configs ./configs
+    11 +
+    12 +RUN pnpm install --frozen-lockfile
+    13 +RUN pnpm run check
+    14 +
+    15 +CMD ["pnpm", "run", "test"]
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\configs\test\README.md (+3
+  -0)
+    1 +# Test configuration
+    2 +
+    3 +Vitest runs with `--passWithNoTests` during Phase 1. A shared configuration
+       will be introduced when the first test suite needs common behavior.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\configs\typescript\tsconfig.app.json (+7 -0)
+    1 +{
+    2 +  "extends": "./tsconfig.base.json",
+    3 +  "compilerOptions": {
+    4 +    "composite": true,
+    5 +    "sourceMap": true
+    6 +  }
+    7 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\configs\typescript\tsconfig.base.json (+17 -0)
+     1 +{
+     2 +  "$schema": "https://json.schemastore.org/tsconfig",
+     3 +  "compilerOptions": {
+     4 +    "target": "ES2024",
+     5 +    "lib": ["ES2024"],
+     6 +    "module": "NodeNext",
+     7 +    "moduleResolution": "NodeNext",
+     8 +    "strict": true,
+     9 +    "noUncheckedIndexedAccess": true,
+    10 +    "exactOptionalPropertyTypes": true,
+    11 +    "noImplicitOverride": true,
+    12 +    "noFallthroughCasesInSwitch": true,
+    13 +    "forceConsistentCasingInFileNames": true,
+    14 +    "skipLibCheck": true,
+    15 +    "verbatimModuleSyntax": true
+    16 +  }
+    17 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\configs\typescript\tsconfig.package.json (+9 -0)
+    1 +{
+    2 +  "extends": "./tsconfig.base.json",
+    3 +  "compilerOptions": {
+    4 +    "composite": true,
+    5 +    "declaration": true,
+    6 +    "declarationMap": true,
+    7 +    "sourceMap": true
+    8 +  }
+    9 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\eslint.config.mjs (+17 -0)
+     1 +import js from '@eslint/js';
+     2 +import tseslint from 'typescript-eslint';
+     3 +
+     4 +export default tseslint.config(
+     5 +  {
+     6 +    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '.turbo
+        /**', 'pnpm-lock.yaml']
+     7 +  },
+     8 +  js.configs.recommended,
+     9 +  ...tseslint.configs.recommended,
+    10 +  {
+    11 +    files: ['**/*.ts'],
+    12 +    rules: {
+    13 +      '@typescript-eslint/consistent-type-imports': 'error',
+    14 +      '@typescript-eslint/no-explicit-any': 'error'
+    15 +    }
+    16 +  }
+    17 +);
+
+     4 +    { "path": "./apps/desktop" },
+     5 +    { "path": "./apps/cli" },
+     6 +    { "path": "./packages/protocol" },
+     7 +    { "path": "./packages/control-plane" },
+     8 +    { "path": "./packages/agent-worker" },
+     9 +    { "path": "./packages/extension-api" },
+    10 +    { "path": "./packages/extension-host" },
+    11 +    { "path": "./packages/client-sdk" },
+    12 +    { "path": "./packages/testkit" }
+    13 +  ]
+    14 +}
+
+• Edited 15 files (+88 -0)
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\cli\package.json (+11
+  -0)
+     1 +{
+     2 +  "name": "@piston/cli",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "scripts": {
+     7 +    "build": "tsc -p tsconfig.json",
+     8 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+     9 +    "test": "vitest run --passWithNoTests"
+    10 +  }
+    11 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\cli\src\index.ts (+1
+  -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\cli\tsconfig.json (+5
+  -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.app.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\desktop\package.json
+  (+11 -0)
+     1 +{
+     2 +  "name": "@piston/desktop",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "scripts": {
+     7 +    "build": "tsc -p tsconfig.json",
+     8 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+     9 +    "test": "vitest run --passWithNoTests"
+    10 +  }
+    11 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\desktop\src\index.ts
+  (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\apps\desktop\tsconfig.json
+  (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.app.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\agent-
+  worker\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/agent-worker",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+    10 +    "test": "vitest run --passWithNoTests"
+    11 +  }
+    12 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\agent-
+  worker\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\agent-
+  worker\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\control-
+  plane\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/control-plane",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+    10 +    "test": "vitest run --passWithNoTests"
+    11 +  }
+    12 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\control-
+  plane\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\control-
+  plane\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\protocol\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/protocol",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\protocol\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\protocol\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+• Edited 12 files (+72 -0)
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\client-
+  sdk\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/client-sdk",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+    10 +    "test": "vitest run --passWithNoTests"
+    11 +  }
+    12 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\client-
+  sdk\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\client-
+  sdk\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  api\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/extension-api",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+    10 +    "test": "vitest run --passWithNoTests"
+    11 +  }
+    12 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  api\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  api\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  host\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/extension-host",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+    10 +    "test": "vitest run --passWithNoTests"
+    11 +  }
+    12 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  host\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\packages\extension-
+  host\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\testkit\package.json (+12 -0)
+     1 +{
+     2 +  "name": "@piston/testkit",
+     3 +  "version": "0.1.0",
+     4 +  "private": true,
+     5 +  "type": "module",
+     6 +  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/inde
+        x.js" } },
+     7 +  "scripts": {
+     8 +    "build": "tsc -p tsconfig.json",
+     9 +    "typecheck": "tsc -p tsconfig.json --noEmit",
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\testkit\src\index.ts (+1 -0)
+    1 +export {};
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\packages\testkit\tsconfig.json (+5 -0)
+    1 +{
+    2 +  "extends": "../../configs/typescript/tsconfig.package.json",
+    3 +  "compilerOptions": { "rootDir": "./src", "outDir": "./dist" },
+    4 +  "include": ["src/**/*.ts"]
+    5 +}
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• La base técnica ya está materializada: los dos clientes y siete paquetes son
+  esqueletos TypeScript sin lógica de dominio. Ahora registraré las decisiones en
+  ADRs y documentaré los límites de product packs, extensiones y operaciones antes
+  de instalar dependencias y validar.
+
+• Edited 21 files (+143 -0)
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\api\README.md (+3 -0)
+    1 +# API
+    2 +
+    3 +The public protocol is intentionally empty until the first Phase 2 contract
+       is approved.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\architecture\ADR-
+  0001.md (+23 -0)
+     1 +# ADR-0001: Plataforma compartida y product packs
+     2 +
+     3 +## Estado
+     4 +
+     5 +Aceptado.
+     6 +
+     7 +## Problema
+     8 +
+     9 +Las aplicaciones especializadas del ecosistema no deben duplicar agentes, m
+        odelos, permisos ni infraestructura.
+    10 +
+    11 +## Alternativas consideradas
+    12 +
+    13 +1. Aplicaciones independientes con sus propios runtimes.
+    14 +2. Un único producto monolítico con funcionalidades activadas por banderas.
+    15 +3. Una plataforma común con product packs declarativos.
+    16 +
+    17 +## Decisión
+    18 +
+    19 +Piston usa una plataforma común. Piston Code, Gold, Music y Video serán pro
+        duct packs que seleccionan capacidades, políticas y experiencia de producto
+        , sin contener un runtime propio.
+    20 +
+    21 +## Consecuencias
+    22 +
+    23 +Las mejoras del núcleo se reutilizan en todo el ecosistema. Los product pac
+        ks solo pueden depender del protocolo público; no pueden importar implement
+        aciones de plataforma.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\architecture\ADR-
+  0002.md (+23 -0)
+     1 +# ADR-0002: Separación entre clientes, control plane y agent worker
+     2 +
+     3 +## Estado
+     4 +
+     5 +Aceptado.
+     6 +
+     7 +## Problema
+     8 +
+     9 +Un agente de larga duración no debe bloquear una interfaz ni perder su sesi
+        ón cuando un cliente se cierra.
+    10 +
+    11 +## Alternativas consideradas
+    12 +
+    13 +1. Ejecutar agentes dentro de cada cliente.
+    14 +2. Ejecutar todo en un proceso monolítico.
+    15 +3. Separar clientes, control plane y workers de agentes.
+    16 +
+    17 +## Decisión
+    18 +
+    19 +Los clientes observan y controlan sesiones; el control plane coordina sesio
+        nes, políticas, registros y eventos; el agent worker ejecutará agentes. Las
+         fronteras se definen desde la Fase 1 aunque la implementación distribuida
+        se difiere.
+    20 +
+    21 +## Consecuencias
+    22 +
+    23 +El sistema puede empezar localmente y evolucionar a un daemon o servicio re
+        moto sin cambiar los contratos públicos. Ningún cliente importará la implem
+        entación del control plane.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\architecture\ADR-
+  0003.md (+23 -0)
+     1 +# ADR-0003: Capability Protocol y adaptadores externos
+     2 +
+     3 +## Estado
+     4 +
+     5 +Aceptado.
+     6 +
+     7 +## Problema
+     8 +
+     9 +Los agentes no deben depender de MCP, CLI, REST, GraphQL, gRPC, SDKs ni pro
+        veedores concretos.
+    10 +
+    11 +## Alternativas consideradas
+    12 +
+    13 +1. Integrar cada protocolo directamente en los agentes.
+    14 +2. Construir un traductor central que interprete todos los formatos de domi
+        nio.
+    15 +3. Definir un protocolo interno de capacidades y adaptar cada integración e
+        xternamente.
+    16 +
+    17 +## Decisión
+    18 +
+    19 +`@piston/protocol` definirá contratos versionados para capacidades, solicit
+        udes, resultados, eventos, artefactos, errores y manifiestos. Cada protocol
+        o o proveedor externo se implementará como extensión.
+    20 +
+    21 +## Consecuencias
+    22 +
+    23 +El Traductor Universal queda limitado a normalizar capacidades, no a interp
+        retar formatos de dominio. Se podrá reemplazar una integración sin modifica
+        r agentes ni product packs.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\architecture\ADR-
+  0004.md (+23 -0)
+     1 +# ADR-0004: Extensiones aisladas, declarativas y gobernadas por permisos
+     2 +
+     3 +## Estado
+     4 +
+     5 +Aceptado.
+     6 +
+     7 +## Problema
+     8 +
+     9 +Las extensiones de terceros necesitan extensibilidad sin acceso implícito a
+         secretos, archivos, red o procesos.
+    10 +
+    11 +## Alternativas consideradas
+    12 +
+    13 +1. Plugins ejecutados libremente en el proceso principal.
+    14 +2. APIs internas sin manifiestos ni control de versión.
+    15 +3. Extension API pública, Extension Host y manifiestos con permisos explíci
+        tos.
+    16 +
+    17 +## Decisión
+    18 +
+    19 +Las extensiones usarán `@piston/extension-api` y se cargarán mediante `@pis
+        ton/extension-host`. El manifiesto declarará versión, capacidades requerida
+        s, permisos, dependencias y ubicación de ejecución. El control plane aplica
+        rá las decisiones de política.
+    20 +
+    21 +## Consecuencias
+    22 +
+    23 +La primera implementación puede ser local, pero el contrato permite aislami
+        ento posterior en workers o procesos. Las extensiones no pueden importar in
+        ternals de Piston ni otras extensiones directamente.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\concepts\README.md (+3
+  -0)
+    1 +# Concepts
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\concepts\README.md (+3
+  -0)
+    1 +# Concepts
+    2 +
+    3 +Piston is a shared platform of clients, product packs, capabilities and gove
+       rned extensions.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\docs\guides\README.md (+3
+  -0)
+    1 +# Guides
+    2 +
+    3 +Developer and integration guides will be added with the first public workflo
+       ws.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  program\examples\extensions\README.md (+3 -0)
+    1 +# Extension examples
+    2 +
+    3 +Examples are deferred until the Extension API has its first stable capabilit
+       y contract.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\examples\product-
+  packs\README.md (+3 -0)
+    1 +# Product pack examples
+    2 +
+    3 +Examples are deferred until product-pack manifests are specified.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\extensions\built-
+  in\README.md (+3 -0)
+    1 +# Built-in extensions
+    2 +
+    3 +Official extensions will be added here only after their public capability co
+       ntracts exist.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\ops\README.md (+3 -0)
+    1 +# Operations
+    2 +
+    3 +Container and deployment assets belong here once a runnable service exists.
+       The Phase 1 Dockerfile validates the build environment only.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\product-packs\README.md (+3
+  -0)
+    1 +# Product packs
+    2 +
+    3 +Each product pack is declarative composition only. Product behavior is defer
+       red until its dedicated implementation phase.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\product-packs\piston-
+  code\README.md (+3 -0)
+    1 +# Piston Code
+    2 +
+    3 +Reserved for the software-development product pack.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\product-packs\piston-
+  gold\README.md (+3 -0)
+    1 +# Piston Gold
+    2 +
+    3 +Reserved for the professional-document product pack.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\product-packs\piston-
+  music\README.md (+3 -0)
+    1 +# Piston Music
+    2 +
+    3 +Reserved for the music-production product pack.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\product-packs\piston-
+  video\README.md (+3 -0)
+    1 +# Piston Video
+    2 +
+    3 +Reserved for the video-production product pack.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\tests\contract\README.md
+  (+3 -0)
+    1 +# Contract tests
+    2 +
+    3 +Reserved for compatibility tests of the public Piston protocol and extension
+        API.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\tests\e2e\README.md (+3 -0)
+    1 +# End-to-end tests
+    2 +
+    3 +Reserved for user-facing product workflows.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\tests\integration\README.md
+  (+3 -0)
+    1 +# Integration tests
+    2 +
+    1 +# Generators
+    2 +
+    3 +Package, extension and product-pack generators will be introduced after thei
+       r manifests are stable.
+
+  └ Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\tooling\scripts\README.md
+  (+3 -0)
+    1 +# Development scripts
+    2 +
+    3 +Root package scripts are the only automation in Phase 1. Generators and cust
+       om scripts are intentionally deferred.
+
+• Added Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\README.phase1.md (+32
+-0)
+     1 +# Piston Code Agent
+     2 +
+     3 +Piston Code Agent is the first product pack of an open, modular platform fo
+        r AI-assisted creation and automation.
+     4 +
+     5 +## Phase 1 status
+     6 +
+     7 +Phase 1 establishes the monorepo, quality gates, package boundaries and arc
+        hitecture records. It intentionally contains no agent, model, plugin, produ
+        ct or UI implementation.
+     8 +
+     9 +## Workspace
+    10 +
+    11 +- `apps/`: empty client shells for desktop and CLI surfaces.
+    12 +- `product-packs/`: declarative product boundaries.
+    13 +- `packages/`: platform contracts and runtime boundaries.
+    14 +- `extensions/`: future built-in extensions.
+    15 +- `docs/architecture/`: Architecture Decision Records.
+    16 +
+    17 +## Commands
+    18 +
+    19 +```bash
+    20 +pnpm install
+
+
+✔ You approved codex to run $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE
+  IA\Proyectos\piston program... this time
+
+• Ran $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  │ program'; Copy-Item -LiteralPath (Join-Path $project 'README.phase1.md')
+  │ -Destination (Join-Path $project 'README.md') -Force; Remove-Item
+  │ … +1 lines
+    ✔ Inspeccionar estado actual y definir el esqueleto compilable
+    ✔ Crear workspace, paquetes, configuraciones, ADRs y automatización
+    □ Instalar dependencias y ejecutar validaciones
+    □ Revisar resultados y entregar informe de Fase 1
+
+✔ You approved codex to run pnpm.cmd install this time
+
+◦ Running pnpm.cmd install
+  └ Scope: all 10 workspace projects
+    Progress: resolved 1, reused 0, downloaded 0, added 0
+    … +53 lines (ctrl + t to view transcript)
+    … +57 lines (ctrl + t to view transcript)
+    turbo.json 1ms (unchanged)
+    $ prettier --write .
+
+✔ You approved codex to run pnpm.cmd run check this time
+
+• Ran pnpm.cmd run check
+  └ Checking formatting...
+    All matched files use Prettier code style!
+    … +156 lines (ctrl + t to view transcript)
+     WARNING  no output files found for task @piston/testkit#test. Please check
+    your `outputs` key in `turbo.json`
+
+───────────────────────────────────────────────────────────────────────────────────
+
+• Las puertas de calidad pasaron, pero Turbo informó que esperaba directorios de
+  cobertura inexistentes en una fase sin pruebas. Ajustaré esa declaración a
+  outputs: [] para eliminar una advertencia de configuración, y después repetiré
+  las validaciones de Turbo y compilación.
+
+• Added Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\turbo.phase1.json (+17
+-0)
+     1 +{
+     2 +  "$schema": "https://turbo.build/schema.json",
+
+      "id": "3HEkEtxtwmhWWFtwGSRiNm9YOuY",
+    • turbo 2.10.7
+
+⚠ Heads up, you have less than 10% of your monthly limit left. Run /status for a
+  breakdown.
+
+
+⚠ Heads up, you have less than 5% of your monthly limit left. Run /status for a
+  breakdown.
+
+
+
+• Ran $project = 'C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston
+  │ program'; $manifests = Get-ChildItem -LiteralPath $project -Recurse -Filter
+  │ package.json -File | Where-Object { $_.FullName -notmatch '\\node_modules\
+  │ … +5 lines
+  └ TRACKED_SOURCE_FILES:
+    C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston program\turbo.json
+    … +87 lines (ctrl + t to view transcript)
+    ?? tsconfig.json
+    ?? turbo.json
+
+■ You've hit your us

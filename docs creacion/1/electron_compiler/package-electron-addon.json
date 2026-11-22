@@ -1,0 +1,30 @@
+{
+  "name": "ress",
+  "productName": "ress",
+  "version": "1.0.0",
+  "description": "Proyecto exportado de Google AI Studio",
+  "main": "electron-main.js",
+  "scripts": {
+    "build:exe": "electron-builder --win portable --config.win.target=portable"
+  },
+  "build": {
+    "appId": "com.appkis.ress",
+    "productName": "ress",
+    "files": [
+      "dist/**/*",
+      "electron-main.js",
+      "package.json",
+      ".env"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "artifactName": "${productName}_v${version}_Portable.exe"
+    }
+  }
+}

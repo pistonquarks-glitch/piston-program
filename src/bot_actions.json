@@ -1,61 +1,820 @@
 {
-  "version": 1,
-  "generatedAt": "2026-11-16",
-  "description": "Manual de acciones del asistente Piston Quarks (Gema 4 - Ingenieria Conversacional). Define respuestas predefinidas por intento para que la IA local (Qwen2.5 via Ollama) responda con precision y no improvise.",
+  "version": 5,
+  "generatedAt": "2026-11-21",
+  "description": "Manual de acciones de Pistón Bot: respuestas personalizadas por producto/servicio con triggers específicos y control de apertura de chat (opensNewChat).",
   "escalation": {
     "humanPhone": "+51 930 640 071",
-    "humanName": "Equipo Piston Quarks",
-    "context": "Escalar cuando la consulta requiere decision comercial/tecnica profunda, datos que no tiene el asistente, o que el cliente lo solicite explicitamente."
+    "humanName": "Rony — Piston Quarks",
+    "context": "Escalar cuando piden humano, preguntan si es bot, falta un dato confirmado, o el caso es sensible (dinero, reclamo, legal)."
   },
-  "defaultResponse": "Gracias por tu consulta. Te estoy pasando con un asistente especializado de Piston Quarks para darte una respuesta detallada. Un momento.",
+  "defaultResponse": "No quiero inventarte una respuesta. Escríbele o llámale a Rony (+51 930 640 071) para confirmarlo. ¿Qué necesitas resolver?",
   "actions": [
     {
       "id": "saludo",
-      "name": "Saludo / Presentacion",
+      "name": "Saludo / Apertura con filtro",
       "type": "static",
       "requiresHuman": false,
-      "triggers": ["hola", "hello", "hey", "buenas", "buenos dias", "buenas tardes", "buenas noches", "buenos días"],
-      "response": "¡Hola! 👋 Soy el asistente de Piston Quarks. Atendemos consultas sobre las 9 Gemas: POS Inventory, Presencia Digital, Viralización, Ingeniería Conversacional, IA Creativa, Guionización, Digitalización, Automatización y Piston Commerce. ¿En qué te ayudo?"
+      "opensNewChat": false,
+      "triggers": [
+        "hola",
+        "buenas",
+        "buenos dias",
+        "buenas tardes",
+        "buenas noches",
+        "buenos días",
+        "hey",
+        "hello"
+      ],
+      "response": "Hola, soy Pistón Bot de Piston Quarks. ¿Ya eres cliente o es tu primera vez por aquí?"
     },
     {
-      "id": "precios_gemas",
-      "name": "Consulta de precios / Catalogo de Gemas",
+      "id": "identidad_bot",
+      "name": "Consulta de identidad (silencio + aviso a Rony)",
       "type": "static",
       "requiresHuman": false,
-      "triggers": ["precio", "precios", "catálogo", "catalogo", "planes", "servicios", "gema", "gemas", "costo", "costos", "tarifa", "tarifas", "cuota", "cuotas", "planes de"],
-      "response": "Tenemos 9 Gemas de Piston Quarks: G1 POS Inventory S/550, G2 Presencia Digital S/1,200, G3 Viralización S/1,200, G4 Ingeniería Conversacional S/1,200, G5 IA Creativa S/1,200, G6 Guionización S/1,200, G7 Digitalización S/1,200, G8 Automatización S/1,200, G9 Piston Commerce (cotización personalizada)."
-    },
-    {
-      "id": "detalle_gema",
-      "name": "Solicitud de detalle de una Gema especifica",
-      "type": "static",
-      "requiresHuman": false,
-      "triggers": ["detalle", "detalle de la gema", "que incluye", "que incluye la gema", "que incluye el plan", "alcance", "alcance de", "que ofrece", "que ofrece la gema", "que hace", "funcionalidad", "funcionalidades", "caracteristicas", "características"],
-      "response": "¿Sobre cuál Gema te gustaría más detalle? Puedo explicarte qué incluye cada una: POS Inventory, Presencia Digital, Viralización, Ingeniería Conversacional, IA Creativa, Guionización, Digitalización, Automatización o Piston Commerce. Dime el nombre de la Gema y te doy el detalle completo."
+      "opensNewChat": true,
+      "triggers": [
+        "eres un bot",
+        "eres bot",
+        "eres una ia",
+        "eres ia",
+        "eres inteligencia artificial",
+        "eres humano",
+        "eres una persona",
+        "eres real",
+        "hablo con un bot",
+        "hablo con una persona",
+        "quien me habla",
+        "quién me habla",
+        "quien eres",
+        "quién eres",
+        "con quien hablo",
+        "con quién hablo",
+        "eres rony",
+        "hablo con rony",
+        "me atiende un bot",
+        "es un bot"
+      ],
+      "response": "[SILENCIO AL CLIENTE] Avisar a Rony (medio de asistencia) con quién y en qué contexto preguntan por identidad; esperar respuesta/instrucción de Rony.",
+      "silentToUser": true
     },
     {
       "id": "escalamiento",
-      "name": "Escalamiento a humano / Decision comercial o tecnica profunda",
+      "name": "Derivación a humano (Rony)",
       "type": "static",
       "requiresHuman": true,
-      "triggers": ["humano", "persona", "operador", "operadora", "agente", "comercial", "comercialista", "responsable", "jefe", "lider", "líder", "liderazgo", "contacto", "telefono", "celular", "número", "numero", "atencion", "atención", "soporte", "asistencia", "asesoria", "asesor"],
-      "response": "Te estoy pasando con un humano de Piston Quarks. Un momento. 📞 Nuestro equipo comercial esta en contacto: +51 930 640 071. Con gusto te atiende personalmente."
+      "opensNewChat": true,
+      "triggers": [
+        "hablar con una persona",
+        "hablar con humano",
+        "hablar con alguien",
+        "quiero hablar con rony",
+        "quiero hablar con una persona",
+        "pasame con rony",
+        "pásame con rony",
+        "atencion humana",
+        "atención humana",
+        "asesor humano",
+        "quiero un humano"
+      ],
+      "response": "Te pongo en contacto con Rony de Piston Quarks: +51 930 640 071. Escríbele o llámalo para que te atienda personalmente. ¿Cuál es el motivo para que vaya al punto?"
+    },
+    {
+      "id": "piston_bot_que_es",
+      "name": "Pistón Bot — qué es y diferenciación",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "que es piston bot",
+        "qué es pistón bot",
+        "que es piston auto",
+        "qué es pistón auto",
+        "que hace piston bot",
+        "qué hace pistón bot",
+        "para que sirve piston bot",
+        "para qué sirve pistón bot",
+        "automatizacion de whatsapp",
+        "automatización de whatsapp",
+        "bot de whatsapp para mi negocio",
+        "chatbot para mi negocio",
+        "bot entrenado con mi voz"
+      ],
+      "response": "Pistón Bot automatiza tu WhatsApp con tu estilo de respuesta, verifica comprobantes Yape/PLIN/transferencia (OCR local + reglas + IA, VÁLIDO/SOSPECHOSO), registra en Excel/Sheets y avisa a Rony si algo no cuadra. Solo entra cuando lo invocan y no inventa datos. ¿Tu negocio cobra por WhatsApp o necesitas atención automática?"
+    },
+    {
+      "id": "piston_bot_precios",
+      "name": "Pistón Bot — precios y planes",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "precio piston bot",
+        "precio de piston bot",
+        "precio pistón bot",
+        "precios piston bot",
+        "planes piston bot",
+        "cuanto cuesta piston bot",
+        "cuánto cuesta pistón bot",
+        "cuanto cuesta el bot de piston",
+        "cuánto cuesta el bot de pistón",
+        "planes de piston bot",
+        "precio del chatbot",
+        "cuanto cuesta el chatbot",
+        "sistema de respuestas automaticas",
+        "sistema de respuestas automaticas pistón bot",
+        "plan 299",
+        "respuestas automaticas",
+        "infinitas respuestas",
+        "cerebro pistón",
+        "voz clonada pistón"
+      ],
+      "response": "Pistón Bot: Sistema de Respuestas Automáticas S/299/mes (instalación S/349, 1er mes S/598; founders 50% por 6 meses). Sistema de Infinitas Respuestas con Cerebro S/750/mes. Cerebro (registro comprobantes+autoría ingresos/egresos) S/1699, voz clonada S/2499. Ahora es un único pago y mensualidades al 5% del valor de cada plan/instalación al 30%. Mismo precio por rubro, cambia el alcance. ¿Cuántos comprobantes o mensajes atiendes al mes?"
+    },
+    {
+      "id": "piston_bot_infinitas",
+      "name": "Pistón Bot — infinitas respuestas con cerebro",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "infinitas respuestas",
+        "sistema infinitas respuestas",
+        "infinitas con cerebro",
+        "cerebro de respuestas",
+        "bot con cerebro",
+        "respuestas infinitas con cerebro"
+      ],
+      "response": "Sí: el Sistema de Infinitas Respuestas con Cerebro S/750/mes responde de forma infinita con un cerebro que piensa, lee el contexto antes de responder, secuencia los conceptos que se mencionan y escala/dirige la conversación hacia la venta; investiga al cliente cuando no lo tiene claro y ofrece precios y contratos cuando hay dirección. ¿Tu caso tiene volumen continuo o buscas el primer cliente?"
+    },
+    {
+      "id": "piston_bot_demo",
+      "name": "Pistón Bot — demo",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "demo piston bot",
+        "demo de piston bot",
+        "demo pistón bot",
+        "quiero una demo de piston bot",
+        "quiero demo del bot",
+        "probar piston bot",
+        "ver demo piston bot",
+        "quiero ver piston bot"
+      ],
+      "response": "Coordinamos una demo de Pistón Bot para tu caso. Escríbele a Rony al +51 930 640 071 o dime tu rubro y cuántos comprobantes/mensajes manejas para enfocarla. ¿Cuál es tu negocio?"
+    },
+    {
+      "id": "piston_bot_compra",
+      "name": "Pistón Bot — cómo comprar y activar",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "como compro piston bot",
+        "cómo compro pistón bot",
+        "como contratar piston bot",
+        "cómo contratar pistón bot",
+        "quiero contratar piston bot",
+        "quiero comprar piston bot",
+        "como pago piston bot",
+        "cómo pago pistón bot"
+      ],
+      "response": "Para activar Pistón Bot te confirmo sistema y forma de pago con Rony. Escríbele o llámalo al +51 930 640 071 y envíale tu rubro y el sistema que te interesa (Sistema de Respuestas Automáticas S/299, Sistema de Infinitas Respuestas con Cerebro S/750, Cerebro S/1699 o Voz clonada S/2499). Ahora es un único pago y mensualidades al 5% del valor de cada plan/instalación al 30%. ¿Cuál sistema tienes en mente?"
+    },
+    {
+      "id": "piston_bot_garantia",
+      "name": "Pistón Bot — garantía y condiciones",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "garantia piston bot",
+        "garantía pistón bot",
+        "garantia del bot",
+        "devolucion piston bot",
+        "reembolso piston bot",
+        "si no funciona piston bot"
+      ],
+      "response": "Las condiciones y garantía se confirman según tu plan y alcance con Rony (sin promesas no verificadas). Escríbele al +51 930 640 071 con tu caso y te lo detalla. ¿Qué te preocupa que no funcione?"
+    },
+    {
+      "id": "piston_bot_voz",
+      "name": "Pistón Bot — voz del dueño",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "voz del dueno",
+        "voz del dueño",
+        "entrenado con mi voz",
+        "responde como yo",
+        "habla como yo",
+        "clonar mi voz en whatsapp"
+      ],
+      "response": "Pistón Bot se entrena con tu estilo: conversaciones, muletillas y forma de atender para responder como tú. No prometemos que sea imperceptible, sí que suene a tu negocio. ¿Quieres que atienda ventas, soporte o verificación de pagos?"
+    },
+    {
+      "id": "piston_bot_verificacion",
+      "name": "Pistón Bot — verificación de comprobantes",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "verificacion de pagos piston bot",
+        "verificación de pagos pistón bot",
+        "verificar comprobantes yape",
+        "verificar comprobantes plin",
+        "verificar comprobante",
+        "ocr comprobante",
+        "comprobante falso yape"
+      ],
+      "response": "Verificamos comprobantes Yape/PLIN/transferencia con OCR local (Tesseract) + reglas + IA: monto, destinatario, fecha y operación. Resultado VÁLIDO o SOSPECHOSO con motivo; la imagen no sale del equipo (según configuración) y lo dudoso pasa a revisión humana. ¿Cuántos comprobantes recibes al día?"
+    },
+    {
+      "id": "piston_bot_reportes",
+      "name": "Pistón Bot — registros y reportes",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "reportes piston bot",
+        "reporte de pagos whatsapp",
+        "registro en excel piston bot",
+        "registro en sheets piston bot",
+        "graficos de movimientos",
+        "gráficos de movimientos"
+      ],
+      "response": "Registramos pagos/operaciones en Excel o Google Sheets (según plan/configuración). En Enterprise entregamos reportes con gráficos de movimientos por WhatsApp. ¿Qué necesitas controlar: caja, pagos o atención?"
+    },
+    {
+      "id": "piston_bot_segmentos",
+      "name": "Pistón Bot — rubros y alcance",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston bot para restaurante",
+        "piston bot para hotel",
+        "piston bot para tienda",
+        "piston bot para clinica",
+        "pistón bot para clínica",
+        "piston bot para inmobiliaria",
+        "piston bot para mi negocio",
+        "chatbot para restaurante",
+        "chatbot para hotel"
+      ],
+      "response": "Pistón Bot sirve para negocios que cobran o atienden por WhatsApp (restaurantes, hoteles, clínicas, comercio, inmobiliarias y más). El precio por plan es el mismo; cambia el alcance/módulo según tu rubro. ¿Cuál es tu rubro y qué quieres automatizar primero?"
+    },
+    {
+      "id": "piston_bot_objecion_precio",
+      "name": "Pistón Bot — objeción de precio",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston bot es caro",
+        "esta caro el bot",
+        "está caro el bot",
+        "muy caro piston bot"
+      ],
+      "response": "Entiendo. El costo se compara con el tiempo que ahorras y los errores/fugas que evitas en cobros y atención; además hay opción founders (50% por 6 meses, primeros 10). ¿Qué volumen manejas para ver si Básico o Pro te calza?"
+    },
+    {
+      "id": "gema_1",
+      "name": "G1 — POS Inventory (S/550)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 1",
+        "gema1",
+        "g1 pos",
+        "pos inventory gema",
+        "gema pos inventory",
+        "gema inventario"
+      ],
+      "response": "G1 POS Inventory — S/550. Solución de punto de venta e inventario para organizar ventas y stock según tu operación. Si quieres afinar alcance para tu negocio, Rony te lo detalla al +51 930 640 071. ¿Qué vendes y cómo controlas tu stock hoy?"
+    },
+    {
+      "id": "gema_2",
+      "name": "G2 — Presencia Digital (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 2",
+        "gema2",
+        "g2 presencia",
+        "gema presencia digital",
+        "presencia digital gema"
+      ],
+      "response": "G2 Presencia Digital — S/1,200. Presencia digital para mostrar tu negocio y captar contactos/clientes. Alcance se ajusta a tu caso con Rony (+51 930 640 071). ¿Ya tienes web/redes o partes desde cero?"
+    },
+    {
+      "id": "gema_3",
+      "name": "G3 — Viralización (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 3",
+        "gema3",
+        "g3 viralizacion",
+        "gema viralizacion",
+        "gema viralización",
+        "viralizacion gema"
+      ],
+      "response": "G3 Viralización — S/1,200. Estrategia y contenido orientado a aumentar alcance y difusión de tu marca. Definimos enfoque con Rony (+51 930 640 071). ¿Qué producto/servicio quieres impulsar?"
+    },
+    {
+      "id": "gema_4",
+      "name": "G4 — Ingeniería Conversacional (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 4",
+        "gema4",
+        "g4 conversacional",
+        "gema ingenieria conversacional",
+        "gema ingeniería conversacional",
+        "ingenieria conversacional gema"
+      ],
+      "response": "G4 Ingeniería Conversacional — S/1,200. Diseño de flujos y experiencia conversacional para atención/ventas. Alcance según tu canal y caso con Rony (+51 930 640 071). ¿Lo necesitas para WhatsApp, web u otro canal?"
+    },
+    {
+      "id": "gema_5",
+      "name": "G5 — IA Creativa (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 5",
+        "gema5",
+        "g5 ia creativa",
+        "gema ia creativa",
+        "ia creativa gema"
+      ],
+      "response": "G5 IA Creativa — S/1,200. Piezas y contenido creativo asistido por IA para tu comunicación. Aterrizamos formatos con Rony (+51 930 640 071). ¿Buscas imágenes, videos o piezas para redes?"
+    },
+    {
+      "id": "gema_6",
+      "name": "G6 — Guionización (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 6",
+        "gema6",
+        "g6 guionizacion",
+        "gema guionizacion",
+        "gema guionización",
+        "guionizacion gema"
+      ],
+      "response": "G6 Guionización — S/1,200. Guiones y estructuración de contenido/mensajes para comunicar con claridad. Ajustamos al objetivo con Rony (+51 930 640 071). ¿Es para ventas, videos o atención?"
+    },
+    {
+      "id": "gema_7",
+      "name": "G7 — Digitalización (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 7",
+        "gema7",
+        "g7 digitalizacion",
+        "gema digitalizacion",
+        "gema digitalización",
+        "digitalizacion gema"
+      ],
+      "response": "G7 Digitalización — S/1,200. Digitalización de procesos y materiales para que tu operación sea más ordenada. Definimos alcance con Rony (+51 930 640 071). ¿Qué proceso quieres digitalizar primero?"
+    },
+    {
+      "id": "gema_8",
+      "name": "G8 — Automatización (S/1,200)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 8",
+        "gema8",
+        "g8 automatizacion",
+        "gema automatizacion",
+        "gema automatización",
+        "automatizacion gema"
+      ],
+      "response": "G8 Automatización — S/1,200. Automatización de procesos operativos/comerciales para ahorrar tiempo y reducir errores. Alcance según tu caso con Rony (+51 930 640 071). ¿Qué tarea repetitiva quieres automatizar?"
+    },
+    {
+      "id": "gema_9",
+      "name": "G9 — Piston Commerce (cotización)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "gema 9",
+        "gema9",
+        "g9 commerce",
+        "gema piston commerce",
+        "piston commerce gema",
+        "gema comercio"
+      ],
+      "response": "G9 Piston Commerce — cotización. Solución de comercio orientada a POS/facturación (SUNAT offline según alcance). Rony te arma la propuesta al +51 930 640 071. ¿Qué necesitas: vender, facturar o ambos?"
+    },
+    {
+      "id": "gemas_catalogo",
+      "name": "Catálogo de las 9 Gemas",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "las 9 gemas",
+        "nueve gemas",
+        "catalogo de gemas",
+        "catálogo de gemas",
+        "lista de gemas",
+        "que gemas tienen",
+        "qué gemas tienen"
+      ],
+      "response": "Las 9 Gemas: G1 POS Inventory S/550, G2 Presencia Digital S/1,200, G3 Viralización S/1,200, G4 Ing. Conversacional S/1,200, G5 IA Creativa S/1,200, G6 Guionización S/1,200, G7 Digitalización S/1,200, G8 Automatización S/1,200, G9 Piston Commerce (cotización). ¿Cuál te interesa para contarte qué resuelve?"
+    },
+    {
+      "id": "pos_inventario",
+      "name": "Piston POS Inventary",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston pos inventary",
+        "pistón pos inventary",
+        "pos inventary",
+        "pos inventario piston",
+        "sistema pos inventary"
+      ],
+      "response": "Piston POS Inventary: inventario, ventas y almacén en tiempo real; 3 APKs (admin, vendedor, almacén), tipos de precio y control de stock. Preventa S/2,500 pago único (confirmado). ¿Qué tipo de negocio tienes y cuántos vendedores/almacenes manejas?"
+    },
+    {
+      "id": "pos_universal",
+      "name": "Pistón POS Universal",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston pos universal",
+        "pistón pos universal",
+        "pos universal",
+        "facturar por voz piston"
+      ],
+      "response": "Pistón POS Universal: solución POS orientada a operación/facturación avanzada (capacidades como facturación por voz/lenguaje natural y módulos de gestión, según plan). Detalles y cotización con Rony al +51 930 640 071. ¿Necesitas facturación, control de caja o ambos?"
+    },
+    {
+      "id": "sistemca_hotel",
+      "name": "SISTEMCA/CAME — hotel o planta",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "sistemca para hotel",
+        "sistemca para planta",
+        "sistema came para hotel",
+        "control de aire acondicionado hotel",
+        "monitoreo electrico hotel"
+      ],
+      "response": "SISTEMCA/CAME: control y monitoreo de aire acondicionado, eléctrica e iluminación para hotel/planta (tableros mono/trifásico según caso). Coordinamos demo y cotización según tu operación con Rony (+51 930 640 071). ¿Qué quieres controlar y cuántos equipos tienes?"
+    },
+    {
+      "id": "came_demo",
+      "name": "CAME — agendar demo",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "demo sistemca",
+        "demo sistema came",
+        "agendar demo sistemca",
+        "agendar demostracion came",
+        "demostración sistema came",
+        "demo 30 min came"
+      ],
+      "response": "Agendamos demo de SISTEMCA/CAME (según tu operación). Dime si es hotel/planta, qué quieres monitorear y si el tablero es mono o trifásico. Coordinación: Rony +51 930 640 071. ¿Qué operación tienes?"
+    },
+    {
+      "id": "came_cotizacion",
+      "name": "CAME — cotización",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "cotizacion sistemca",
+        "cotización sistemca",
+        "cotizacion came",
+        "cotización came",
+        "cotizacion del sistema came",
+        "cotización del sistema came"
+      ],
+      "response": "Para cotizar SISTEMCA/CAME necesito: tipo de operación (hotel/planta), qué controlar (AA/eléctrica/iluminación), tablero mono/trifásico y cantidad de equipos. Rony te cotiza al +51 930 640 071. ¿Qué operación es?"
+    },
+    {
+      "id": "servicios_web",
+      "name": "Servicio web / página / tienda",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "quiero una web",
+        "necesito una pagina web",
+        "necesito una página web",
+        "pagina web para mi negocio",
+        "página web para mi negocio",
+        "desarrollo web",
+        "tienda online para mi negocio"
+      ],
+      "response": "Hacemos páginas web y tiendas según tu objetivo (mostrar, vender o captar citas), con propuesta y tiempos definidos contigo. Rony te asesora al +51 930 640 071. ¿Qué vendes y qué quieres lograr con la web?"
+    },
+    {
+      "id": "servicios_subtitulos",
+      "name": "Servicio de subtitulado",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "subtitular un video",
+        "subtitulos para video",
+        "subtítulos para video",
+        "servicio de subtitulado",
+        "subtitular video"
+      ],
+      "response": "Servicio de subtitulado: prueba de 1 minuto gratis y entrega en SRT o MP4 según lo que necesites. Escríbele a Rony al +51 930 640 071 con el video e idioma. ¿En qué idioma lo necesitas?"
+    },
+    {
+      "id": "servicios_marketing",
+      "name": "Marketing y video publicitario",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "marketing y video",
+        "video publicitario",
+        "campaña de marketing",
+        "campana de marketing",
+        "servicio de marketing"
+      ],
+      "response": "Marketing y video publicitario: armamos diagnóstico y propuesta según tu objetivo y audiencia. Coordina con Rony al +51 930 640 071. ¿Qué vendes y a quién quieres llegar?"
+    },
+    {
+      "id": "piston_music",
+      "name": "Pistón Music",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston music",
+        "pistón music"
+      ],
+      "response": "Pistón Music es la app de Piston Quarks para descargar/reproducir música y video. Te puedo orientar con el enlace oficial: https://pistonquarks.store/piston-music/ ¿La quieres para uso personal o comercial?"
+    },
+    {
+      "id": "rompe_idiomas",
+      "name": "El Rompe Idiomas",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "rompe idiomas",
+        "rompeidiomas",
+        "el rompe idiomas"
+      ],
+      "response": "El Rompe Idiomas es el intérprete EN↔ES en vivo por link de Piston Quarks. Info: https://pistonquarks.store/rompe-idiomas/ ¿Lo necesitas para entrevistas o conversaciones en inglés?"
+    },
+    {
+      "id": "piston_studio",
+      "name": "Pistón Studio",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston studio",
+        "pistón studio"
+      ],
+      "response": "Pistón Studio es para crear posters/escenas y piezas visuales con IA. Info: https://pistonquarks.store/studio/ ¿Qué pieza quieres crear?"
+    },
+    {
+      "id": "piston_visual",
+      "name": "Pistón Visual",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston visual",
+        "pistón visual",
+        "generador de imagenes piston",
+        "generador de imágenes pistón"
+      ],
+      "response": "Pistón Visual es el generador de imágenes IA de Piston Quarks. Info: https://pistonquarks.store/generador/ ¿Necesitas imágenes para redes, productos o campañas?"
+    },
+    {
+      "id": "guionizador",
+      "name": "Guionizador",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston guionizador",
+        "pistón guionizador",
+        "guionizador piston"
+      ],
+      "response": "Pistón Guionizador ayuda a estructurar guiones y líneas de contenido con IA. Info: https://pistonquarks.store/apps/guinisador/ ¿Qué tipo de contenido quieres guionizar?"
+    },
+    {
+      "id": "opencode_cloud",
+      "name": "OpenCode Cloud",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "opencode cloud",
+        "open code cloud"
+      ],
+      "response": "OpenCode Cloud es el asistente de código en la nube de Piston Quarks. Info: https://pistonquarks.store/opencode/ ¿Lo buscas para programar o para tu equipo?"
+    },
+    {
+      "id": "cerebro_ia",
+      "name": "Cerebro IA local",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "cerebro ia",
+        "cerebro ia local",
+        "ia local piston"
+      ],
+      "response": "Cerebro IA es la opción de IA local/soberana (hub con modelos locales) de Piston Quarks. Info: https://pistonquarks.store/cerebro/ ¿Buscas usar IA en tu PC o en tu operación?"
+    },
+    {
+      "id": "energia_solar_eolica",
+      "name": "Energía sostenible",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "energia solar piston",
+        "energía solar pistón",
+        "paneles solares piston",
+        "aerogenerador piston",
+        "microred eolica",
+        "microred eólica"
+      ],
+      "response": "Ofrecemos soluciones de energía sostenible (paneles, almacenamiento, aerogeneradores/microred eólica según proyecto). Info: https://pistonquarks.store/energia/ ¿Buscas para casa, negocio o industria?"
+    },
+    {
+      "id": "importaciones",
+      "name": "Importaciones B2B",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "importaciones b2b",
+        "importar de china",
+        "sourcing china",
+        "importar productos de china"
+      ],
+      "response": "Importaciones B2B (sourcing, gestión y logística): https://pistonquarks.store/importaciones/ ¿Qué producto quieres importar y en qué volumen?"
+    },
+    {
+      "id": "impresion_3d",
+      "name": "Impresión 3D y Academia 3D",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "impresion 3d",
+        "impresión 3d",
+        "imprimir en 3d",
+        "academia 3d",
+        "prototipo 3d"
+      ],
+      "response": "Impresión 3D (prototipos/piezas) y Academia 3D: https://pistonquarks.store/impresion-3d/ ¿Buscas fabricar una pieza o aprender?"
+    },
+    {
+      "id": "medicina_anatomia",
+      "name": "Medicina / Anatomía 3D",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "anatomia 3d",
+        "anatomía 3d",
+        "medicina digital",
+        "atlas anatomico 3d",
+        "atlas anatómico 3d"
+      ],
+      "response": "Medicina Digital / Anatomía 3D (atlas y visor interactivo): https://pistonquarks.store/medicina/ ¿Es para estudio, docencia o simulación?"
+    },
+    {
+      "id": "piston_driver",
+      "name": "Piston Driver / logística",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "piston driver",
+        "pistón driver",
+        "delivery piston"
+      ],
+      "response": "Piston Driver y metodología logística de Piston Quarks: https://pistonquarks.store/metodologia/ ¿Buscas solución de delivery/logística para tu zona o negocio?"
+    },
+    {
+      "id": "tienda_catalogo",
+      "name": "Tienda y catálogo",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "tienda piston quarks",
+        "catalogo piston quarks",
+        "catálogo pistón quarks",
+        "ver productos piston quarks"
+      ],
+      "response": "Puedes ver el catálogo y la tienda en https://pistonquarks.store/store/ y https://pistonquarks.store/tienda/ ¿Buscas software, POS, energía o algún servicio específico?"
+    },
+    {
+      "id": "infraestructura_internacional",
+      "name": "Infraestructura internacional",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "infraestructura internacional",
+        "infraestructura soberana",
+        "despliegue internacional piston"
+      ],
+      "response": "Soluciones de infraestructura/despliegue internacional de Piston Quarks: https://pistonquarks.store/internacional/ ¿Qué necesidad técnica o de despliegue tienes?"
     },
     {
       "id": "pedido_seguimiento",
-      "name": "Seguimiento de pedido / compra / pago / entrega",
+      "name": "Seguimiento (solo en conversación activa)",
       "type": "static",
       "requiresHuman": false,
-      "triggers": ["pedido", "pedidos", "orden", "compra", "compras", "factura", "entrega", "entregas", "envio", "envío", "pago", "pagos", "transferencia", "yape", "plin", "mercado pago", "seguimiento", "estado del pedido"],
-      "response": "Para darte seguimiento a tu pedido necesito algunos datos: tipo de negocio, volumen de trabajo y sector. Con esa informacion el equipo comercial te responde con el estado. ¿Me pasas esos datos?"
+      "opensNewChat": false,
+      "triggers": [
+        "seguimiento de mi pedido",
+        "estado de mi pedido",
+        "donde esta mi pedido",
+        "dónde está mi pedido",
+        "estado de mi compra",
+        "seguimiento de mi compra",
+        "cuando llega mi pedido",
+        "cuándo llega mi pedido",
+        "numero de orden",
+        "número de orden",
+        "tracking de mi pedido"
+      ],
+      "response": "Para ayudarte con el seguimiento necesito el dato clave (número de pedido/orden o comprobante). Si es sobre un pago o activación de Piston Quarks, Rony lo confirma al +51 930 640 071. ¿Qué dato tienes a la mano?"
     },
     {
-      "id": "disclaimer_medio",
-      "name": "Aclaracion / No tengo claro",
+      "id": "piston_bot_landing",
+      "name": "Landing / seguimiento (si no compran directamente)",
       "type": "static",
       "requiresHuman": false,
-      "triggers": ["no lo tengo claro", "no tengo claro", "no estoy seguro", "no se", "no lo sabia", "no sabia", "dudas", "duda"],
-      "response": "No lo tengo claro con los datos que tengo. Te confirmo con el equipo comercial y te respondo en cuanto tenga novedad. Mientras tanto, ¿te interesa alguna de las 9 Gemas?"
+      "opensNewChat": true,
+      "triggers": [
+        "vi la landing",
+        "vi la pagina",
+        "vi la web",
+        "vi los precios",
+        "vi los planes",
+        "vi los niveles",
+        "vi el proceso",
+        "vi la seccion",
+        "estoy en la landing",
+        "estoy en la pagina",
+        "estoy en la web"
+      ],
+      "response": "Gracias por revisar la landing de Pistón Auto. Si hoy no compraste, te dejo la salida directa: te explico por WhatsApp qué sistema (Respuestas Automaticas S/299 o Infinitas con Cerebro S/750) calza con tu volumen, o coordinamos la demo con Rony (+51 930 640 071). ¿Quieres que te llegue por WhatsApp?"
+    },
+    {
+      "id": "piston_bot_proceso",
+      "name": "Landing / proceso de respuesta (5 fases)",
+      "type": "static",
+      "requiresHuman": false,
+      "opensNewChat": true,
+      "triggers": [
+        "como funciona el bot",
+        "cómo funciona el bot",
+        "como funciona piston auto",
+        "cómo funciona pistón auto",
+        "proceso del bot",
+        "proceso de respuesta",
+        "como se genera la respuesta",
+        "como generas la respuesta",
+        "5 fases",
+        "fases del bot",
+        "como generamos la respuesta",
+        "guion de respuesta"
+      ],
+      "response": "El proceso es de 5 fases: filtro, revelación, puentes, objeción/cierre y acción. Lo aplicamos en cada conversación y cuando no se compra, te dejamos la salida con una demo o con Rony (+51 930 640 071). ¿Quieres que te muestre cómo queda la conversación?"
     }
   ]
 }

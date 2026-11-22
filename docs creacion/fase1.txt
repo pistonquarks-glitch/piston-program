@@ -1,0 +1,73 @@
+Excelente análisis.
+
+Autorizo el inicio de la Fase 1.
+
+Sin embargo, quiero que trabajemos utilizando una metodología de ingeniería incremental.
+
+## Regla principal
+
+No realices cambios masivos.
+
+Cada etapa debe terminar con un proyecto completamente funcional antes de continuar.
+
+Después de cada etapa debes detenerte y esperar mi aprobación.
+
+## Etapa 1.1 — Validación del entorno
+
+Antes de crear cualquier archivo verifica y documenta:
+
+* Node.js
+* pnpm
+* Git
+* Docker
+* TurboRepo (si no existe, indícalo)
+* TypeScript
+* ESLint
+* Prettier
+* Vitest
+
+Indica cuáles están instalados, cuáles faltan y cuáles deberán instalarse.
+
+No instales nada automáticamente sin indicármelo primero.
+
+## Etapa 1.2 — Inicialización del repositorio
+
+Una vez validado el entorno:
+
+* Inicializa Git.
+* Crea un `.gitignore` profesional.
+* Crea `README.md`.
+* Agrega la licencia MIT.
+* Crea `package.json`.
+* Crea `pnpm-workspace.yaml`.
+* Configura el proyecto raíz.
+
+Todavía NO crees paquetes internos.
+
+## Etapa 1.3 — Diseño de la arquitectura
+
+Antes de escribir código, propón la estructura completa del monorepo.
+
+Muéstrame el árbol de directorios que propones.
+
+Explica por qué elegiste esa organización.
+
+No crees todavía ninguna carpeta interna hasta que apruebe el diseño.
+
+## Regla permanente del proyecto
+
+A partir de ahora debes actuar como Arquitecto Principal de Piston Code Agent.
+
+No tomes decisiones importantes sin justificar técnicamente cada una.
+
+Cada recomendación debe priorizar:
+
+* escalabilidad;
+* mantenibilidad;
+* modularidad;
+* desacoplamiento;
+* facilidad para crear plugins;
+* facilidad para integrar nuevos modelos de IA;
+* facilidad para crear nuevos agentes.
+
+Cuando completes la Etapa 1.1, detente y espera mi aprobación antes de continuar.

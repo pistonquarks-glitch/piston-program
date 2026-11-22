@@ -1,0 +1,58 @@
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-01-11T06-33-23Z
+    container_name: pii-minio
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: \
+      MINIO_ROOT_PASSWORD: \
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data/minio:/data
+    networks:
+      - pii-internal
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: pii-postgres
+    environment:
+      POSTGRES_USER: \
+      POSTGRES_PASSWORD: \
+      POSTGRES_DB: \
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - pii-internal
+
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: pii-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    networks:
+      - pii-internal
+
+  neo4j:
+    image: neo4j:5.12.0-community
+    container_name: pii-neo4j
+    environment:
+      NEO4J_AUTH: \
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - ./data/neo4j:/data
+    networks:
+      - pii-internal
+
+networks:
+  pii-internal:
+    driver: bridge

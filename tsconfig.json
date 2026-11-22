@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/desktop" },
+    { "path": "./apps/cli" },
+    { "path": "./packages/protocol" },
+    { "path": "./packages/control-plane" },
+    { "path": "./packages/agent-worker" },
+    { "path": "./packages/extension-api" },
+    { "path": "./packages/extension-host" },
+    { "path": "./packages/client-sdk" },
+    { "path": "./packages/testkit" }
+  ]
+}

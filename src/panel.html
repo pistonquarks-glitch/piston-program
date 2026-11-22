@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pistón Panel — Bot WhatsApp</title>
+<style>
+  :root{--bg:#0b1220;--bg2:#121b2f;--card:#17233b;--card2:#1d2c47;--line:#243754;--text:#ecf2ff;--muted:#93a7c4;--accent:#f2b632;--accent2:#ffd46f;--ok:#34d399;--warn:#f59e0b;--bad:#f87171;--blue:#60a5fa}
+  *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#08101d,#0b1220 30%,#0a1322);color:var(--text)}
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  .side{background:rgba(10,18,32,.92);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;gap:10px;align-items:center;padding:6px 8px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--accent);color:#0b1220;display:grid;place-items:center;font-weight:800;font-size:22px}
+  .brand h1{font-size:16px;margin:0;line-height:1.1}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+  .nav button{width:100%;text-align:left;padding:10px 12px;margin:4px 0;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:10px;cursor:pointer;font-size:14px}
+  .nav button:hover{background:rgba(255,255,255,.04);color:var(--text)}
+  .nav button.active{background:rgba(242,182,50,.12);color:var(--accent);border-color:rgba(242,182,50,.18)}
+  .main{padding:22px 24px 40px;max-width:1400px}
+  .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+  .top h2{margin:0;font-size:28px}.top p{margin:6px 0 0;color:var(--muted)}
+  .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(52,211,153,.12);color:#b7f3d8;font-size:12px;border:1px solid rgba(52,211,153,.2)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.12)}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:16px;padding:16px}
+  .stat .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.stat .v{font-size:28px;font-weight:700;margin-top:6px}.stat .s{color:var(--muted);font-size:12px;margin-top:4px}
+  .panel{display:none}.panel.active{display:block}
+  .row{display:grid;grid-template-columns:360px 1fr;gap:16px}
+  .list{max-height:68vh;overflow:auto;padding-right:4px}
+  .chat-item{padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:rgba(255,255,255,.01)}
+  .chat-item:hover{border-color:#35507a}.chat-item.active{border-color:rgba(242,182,50,.45);background:rgba(242,182,50,.06)}
+  .chat-item .jid{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-item .sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-item .meta{display:flex;gap:8px;color:var(--muted);font-size:11px;margin-top:4px;flex-wrap:wrap}
+  .chat-item .preview{color:#b9c9de;font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .badge.bot{color:#93c5fd;border-color:rgba(96,165,250,.3)} .badge.human{color:#fcd34d;border-color:rgba(245,158,11,.3)}
+  .st-blue{color:#60a5fa !important} .st-green{color:#34d399 !important} .st-yellow{color:#fbbf24 !important} .st-red{color:#f87171 !important}
+  .chat-item.st-blue{border-left:4px solid #60a5fa} .chat-item.st-green{border-left:4px solid #34d399} .chat-item.st-yellow{border-left:4px solid #fbbf24} .chat-item.st-red{border-left:4px solid #f87171}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .status-dot.blue{background:#60a5fa}.status-dot.green{background:#34d399}.status-dot.yellow{background:#fbbf24}.status-dot.red{background:#f87171}.status-dot.gray{background:#94a3b8}
+  .msgs{height:56vh;overflow:auto;padding:8px;background:rgba(0,0,0,.12);border-radius:12px;border:1px solid var(--line)}
+  .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .msg.in{background:#22344f;border:1px solid #2d4467}.msg.out{margin-left:auto;background:rgba(242,182,50,.14);border:1px solid rgba(242,182,50,.22)}
+  .msg .t{display:block;color:var(--muted);font-size:10px;margin-top:6px}
+  .composer{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:12px}
+  input,textarea,select{width:100%;background:#0f1a2d;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit}
+  textarea{min-height:110px;resize:vertical}
+  .btn{background:var(--accent);color:#0b1220;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--accent2)} .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)} .btn.ghost:hover{background:rgba(255,255,255,.04)}
+  .btn.danger{background:rgba(248,113,113,.14);color:#fecaca;border:1px solid rgba(248,113,113,.25)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  pre{white-space:pre-wrap;word-break:break-word;background:#0f1a2d;border:1px solid var(--line);padding:12px;border-radius:10px;font-size:12px;color:#cfe0fb;max-height:50vh;overflow:auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{margin-bottom:12px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+  @media(max-width:1100px){.app{grid-template-columns:1fr}.side{position:static;height:auto}.row,.two,.grid{grid-template-columns:1fr}.msgs{height:45vh}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">P</div><div><h1>Pistón Panel</h1><p>Bot WhatsApp</p></div></div>
+    <nav class="nav">
+      <button data-panel="dashboard" class="active">Dashboard</button>
+      <button data-panel="chats">Conversaciones</button>
+      <button data-panel="directives">Directivas</button>
+      <button data-panel="payments">Pagos</button>
+      <button data-panel="config">Configuración</button>
+    </nav>
+    <div style="margin-top:18px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--muted)">
+      <div><strong style="color:var(--text)">Sesión</strong></div>
+      <div id="sideSession" style="margin-top:6px;word-break:break-all">—</div>
+      <div style="margin-top:10px"><strong style="color:var(--text)">Bridge</strong></div>
+      <div style="margin-top:4px">localhost:2013</div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h2 id="title">Dashboard</h2>
+        <p id="subtitle">Estado general del bot y acceso rápido.</p>
+      </div>
+      <div class="pill"><span class="dot"></span><span id="statusPill">Conectado al bridge</span></div>
+    </div>
+
+    <section id="panel-dashboard" class="panel active">
+      <div class="grid">
+        <div class="card stat"><div class="k">Chats</div><div class="v" id="stChats">—</div><div class="s">Conversaciones en estado</div></div>
+        <div class="card stat"><div class="k">Acciones</div><div class="v" id="stActions">—</div><div class="s">Acciones cargadas</div></div>
+        <div class="card stat"><div class="k">Directivas</div><div class="v" id="stDirectives">—</div><div class="s">Reglas activas</div></div>
+        <div class="card stat"><div class="k">Modelo</div><div class="v" id="stModel" style="font-size:16px;line-height:1.3">—</div><div class="s" id="stProvider">—</div></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="toolbar"><strong>Actividad reciente</strong><button class="btn ghost" onclick="loadEvents()">Actualizar</button></div>
+          <pre id="recentEvents">Cargando...</pre>
+        </div>
+        <div class="card">
+          <div class="toolbar"><strong>Gate / Compuerta</strong><button class="btn ghost" onclick="loadGate()">Actualizar</button></div>
+          <pre id="gateBox">Cargando...</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-chats" class="panel">
+      <div class="row">
+        <div class="card">
+          <div class="toolbar"><strong>Chats</strong><button class="btn ghost" onclick="loadChats()">Actualizar</button></div>
+          <div class="small muted" style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap">
+            <span class="status-pill"><span class="status-dot blue"></span>Solo bot</span>
+            <span class="status-pill"><span class="status-dot green"></span>Humano</span>
+            <span class="status-pill"><span class="status-dot yellow"></span>Bot + Humano</span>
+            <span class="status-pill"><span class="status-dot red"></span>IA detectada</span>
+          </div>
+          <div class="list" id="chatList"><div class="empty">Cargando chats...</div></div>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <div><strong id="chatTitle">Selecciona un chat</strong><div class="small muted" id="chatMeta">Aquí verás el historial y podrás responder manualmente.</div></div>
+            <button class="btn ghost" onclick="refreshCurrentChat()">Actualizar</button>
+          </div>
+          <div class="msgs" id="msgs"><div class="empty">Sin chat seleccionado.</div></div>
+          <div class="composer">
+            <input id="replyText" placeholder="Escribe una respuesta manual para este chat..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendReply()}" >
+            <button class="btn" onclick="sendReply()">Enviar</button>
+          </div>
+          <div class="small muted" style="margin-top:8px">El envío usa la sesión Open-WA actual del bridge. Usa este panel en vez de Open WA para responder manualmente.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-directives" class="panel">
+      <div class="two">
+        <div class="card">
+          <div class="toolbar"><strong>Directivas activas</strong><button class="btn ghost" onclick="loadDirectives()">Actualizar</button><button class="btn danger" onclick="clearDirectives()">Borrar todas</button></div>
+          <div id="directivesList" class="list"><div class="empty">Cargando...</div></div>
+        </div>
+        <div class="card">
+          <strong>Nueva directiva</strong>
+          <p class="small muted">Se guarda como directiva del bot. El bridge ya las inyecta en el prompt.</p>
+          <div class="field"><label>Texto</label><textarea id="newDirective" placeholder="Ej: Cuando pregunten por el plan de 299, explica instalación S/349 y pide rubro."></textarea></div>
+          <button class="btn" onclick="addDirective()">Guardar directiva</button>
+          <div id="directiveStatus" class="small muted" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-payments" class="panel">
+      <div class="card">
+        <div class="toolbar"><strong>Pagos / comprobantes</strong><button class="btn ghost" onclick="loadPayments()">Actualizar</button><button class="btn danger" onclick="clearPayments()">Borrar registro</button></div>
+        <div id="paymentsWrap"><div class="empty">Cargando...</div></div>
+      </div>
+    </section>
+
+    <section id="panel-config" class="panel">
+      <div class="card">
+        <div class="toolbar"><strong>Configuración del bot</strong><button class="btn" onclick="saveConfig()">Guardar cambios</button><button class="btn ghost" onclick="loadConfig()">Recargar</button></div>
+        <div class="two">
+          <div class="field"><label>Proveedor</label><select id="cfgProvider"><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option></select></div>
+          <div class="field"><label>Modelo</label><input id="cfgModel" placeholder="baidu/ernie-4.5-21b-a3b"></div>
+        </div>
+        <div class="field"><label>System prompt</label><textarea id="cfgPrompt" style="min-height:220px"></textarea></div>
+        <div class="two">
+          <div class="field"><label>Keywords (una por línea)</label><textarea id="cfgKeywords"></textarea></div>
+          <div class="field"><label>Operadores de pago autorizados (una por línea)</label><textarea id="cfgOps"></textarea></div>
+        </div>
+        <div id="cfgStatus" class="small muted"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+let currentChat = '';
+let chatsCache = [];
+const $ = (id) => document.getElementById(id);
+const fmtTs = (ts) => { if(!ts) return '—'; const d=new Date(Number(ts)||ts); return isNaN(d)?String(ts):d.toLocaleString(); };
+const esc = (s='') => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+document.querySelectorAll('.nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = btn.dataset.panel;
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    $('panel-'+p).classList.add('active');
+    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
+    $('title').textContent=titles[p][0]; $('subtitle').textContent=titles[p][1];
+    if(p==='dashboard'){loadDashboard();}
+    if(p==='chats'){loadChats();}
+    if(p==='directives'){loadDirectives();}
+    if(p==='payments'){loadPayments();}
+    if(p==='config'){loadConfig();}
+  });
+});
+
+async function api(path, opts={}){
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const t = await r.text();
+  try { return JSON.parse(t); } catch { return { raw:t, status:r.status }; }
+}
+
+async function loadDashboard(){
+  try{
+    const [state, gate, events] = await Promise.all([api('/admin/state'), api('/admin/gate'), api('/admin/events?limit=30')]);
+    $('stChats').textContent = gate.chats ?? '0';
+    $('stActions').textContent = state.actionsCount ?? '—';
+    $('stDirectives').textContent = state.directivesCount ?? '—';
+    $('stModel').textContent = state.model || '—';
+    $('stProvider').textContent = state.provider || '—';
+    $('sideSession').textContent = state.sessionId || '—';
+    $('recentEvents').textContent = JSON.stringify(events.events || [], null, 2);
+    $('gateBox').textContent = JSON.stringify({chats:gate.chats,humanTakeoverHours:gate.humanTakeoverHours,dedupeSeconds:gate.dedupeSeconds,strongTriggers:gate.strongTriggers,weakTriggers:gate.weakTriggers}, null, 2);
+    $('statusPill').textContent = 'Bridge activo · ' + (state.provider||'') + ' / ' + (state.model||'');
+  }catch(e){ $('statusPill').textContent = 'Error conectando al bridge'; }
+}
+async function loadEvents(){ const e=await api('/admin/events?limit=40'); $('recentEvents').textContent=JSON.stringify(e.events||[],null,2); }
+async function loadGate(){ const g=await api('/admin/gate'); $('gateBox').textContent=JSON.stringify(g,null,2); }
+
+function chatPreview(c){
+  const t = (c.lastText||'').trim();
+  const b = (c.lastBotText||'').trim();
+  return t || b || 'Sin mensajes';
+}
+function interventionInfo(c){
+  const st = c || {};
+  const bot = !!(st.botIntervened || st.lastBotAt || st.turns);
+  const human = !!(st.humanIntervened || st.lastHumanAt);
+  const ai = !!st.aiSuspected;
+  if (ai) return {key:'ai_detected', label:'IA detectada', color:'red', dot:'red', cls:'st-red'};
+  if (bot && human) return {key:'both', label:'Bot + Humano', color:'yellow', dot:'yellow', cls:'st-yellow'};
+  if (human) return {key:'human_only', label:'Humano', color:'green', dot:'green', cls:'st-green'};
+  if (bot) return {key:'bot_only', label:'Solo bot', color:'blue', dot:'blue', cls:'st-blue'};
+  return {key:'none', label:'Sin intervención', color:'gray', dot:'gray', cls:''};
+}
+function contactTitle(c){
+  return (c.name || c.pushname || c.number || c.jid || 'Contacto').trim();
+}
+function contactSub(c){
+  const bits = [];
+  if (c.number) bits.push('+'+c.number);
+  if (c.jid) bits.push(c.jid);
+  if (c.isBusiness) bits.push('empresa');
+  return bits.join(' · ');
+}
+async function loadChats(){
+  const d = await api('/admin/chats?limit=120');
+  chatsCache = d.chats || [];
+  $('sideSession').textContent = d.sessionId || $('sideSession').textContent;
+  const box = $('chatList');
+  if(!chatsCache.length){ box.innerHTML='<div class="empty">No hay chats todavía.</div>'; return; }
+  box.innerHTML = chatsCache.map(c=>{
+    const active = c.jid===currentChat?'active':'';
+    const it = interventionInfo(c);
+    const mode = c.mode==='human'?'<span class="badge human">humano</span>':'<span class="badge bot">bot</span>';
+    const ai = c.aiSuspected ? `<span class="badge" style="color:#f87171;border-color:rgba(248,113,113,.35)">IA</span>` : '';
+    return `<div class="chat-item ${active} ${it.cls}" onclick="openChat('${esc(c.jid)}')">
+      <div class="jid ${it.cls}">${esc(contactTitle(c))}</div>
+      <div class="sub">${esc(contactSub(c))}</div>
+      <div class="meta"><span class="status-pill"><span class="status-dot ${it.dot}"></span>${esc(it.label)}</span>${mode}${ai}<span>turnos ${c.turns||0}</span></div>
+      <div class="meta"><span>${esc(fmtTs(c.lastSeenAt))}</span></div>
+      <div class="preview">${esc(chatPreview(c))}</div>
+    </div>`;
+  }).join('');
+  if(currentChat) openChat(currentChat, true);
+}
+
+function renderMessages(events, state){
+  if(!events.length){ $('msgs').innerHTML='<div class="empty">No hay eventos para este chat.</div>'; return; }
+  const rows = [];
+  for(const ev of events){
+    if(ev.msg==='webhook_received' && ev.text){ rows.push({dir:'in', text:ev.text, ts:ev.ts, label:ev.from||''}); }
+    if((ev.msg==='ai_sent'||ev.msg==='action_sent'||ev.msg==='calc_huanuco_sent'||ev.msg==='panel_send' || ev.msg==='human_alert_sent') && (ev.reply||ev.text)){
+      rows.push({dir:'out', text:ev.reply||ev.text, ts:ev.ts, label:ev.msg});
+    }
+    if(ev.msg==='human_alert'){ rows.push({dir:'out', text:'[ALERTA INTERNA] '+(ev.reason||'')+' '+(ev.text||''), ts:ev.ts, label:'sistema'}); }
+  }
+  if(!rows.length){ $('msgs').innerHTML='<pre>'+esc(JSON.stringify(events.slice(-30),null,2))+'</pre>'; return; }
+  $('msgs').innerHTML = rows.map(m=>`<div class="msg ${m.dir}">${esc(m.text)}<span class="t">${esc(fmtTs(m.ts))} · ${esc(m.label||'')}</span></div>`).join('');
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+}
+
+async function openChat(jid, silent){
+  currentChat = jid;
+  $('chatTitle').textContent = jid;
+  const d = await api('/admin/chat?jid='+encodeURIComponent(jid)+'&limit=150');
+  const st = d.state || {};
+  const c = { ...st, jid, name: st.name||st.pushname||'', number: st.number||String(jid).replace(/@.*$/,'').replace(/\D/g,'') };
+  const it = interventionInfo(c);
+  $('chatTitle').innerHTML = `<span class="${it.cls}">${esc(contactTitle(c))}</span>`;
+  const metaBits = [
+    `<span class="status-pill"><span class="status-dot ${it.dot}"></span>${esc(it.label)}</span>`,
+    c.number ? '📞 +'+esc(c.number) : '',
+    c.jid ? '🆔 '+esc(c.jid) : '',
+    'modo: '+esc(st.mode||'bot'),
+    'turnos: '+esc(String(st.turns||0)),
+    'último: '+esc(fmtTs(st.lastSeenAt||st.lastUserAt))
+  ];
+  if (st.aiSuspectedReason) metaBits.push('⚠ '+esc(st.aiSuspectedReason));
+  if (st.lastHumanAt) metaBits.push('humano: '+esc(fmtTs(st.lastHumanAt)));
+  if (st.lastBotAt) metaBits.push('bot: '+esc(fmtTs(st.lastBotAt)));
+  $('chatMeta').innerHTML = metaBits.filter(Boolean).join(' · ');
+  renderMessages(d.events||[], st);
+  if(!silent) loadChats();
+  document.querySelectorAll('.chat-item').forEach(el=>el.classList.toggle('active', el.getAttribute('onclick')?.includes(jid)));
+}
+async function refreshCurrentChat(){ if(currentChat) openChat(currentChat, true); }
+
+async function sendReply(){
+  const text = $('replyText').value.trim();
+  if(!currentChat){ alert('Selecciona un chat primero.'); return; }
+  if(!text) return;
+  $('replyText').value='';
+  const r = await api('/admin/send', {method:'POST', body:JSON.stringify({chatId:currentChat, text})});
+  if(!r.ok){ alert('No se pudo enviar: '+(r.error||r.result||'error')); }
+  await openChat(currentChat, true);
+  loadChats();
+}
+
+async function loadDirectives(){
+  const d = await api('/admin/directives');
+  const list = d.directives || [];
+  if(!list.length){ $('directivesList').innerHTML='<div class="empty">No hay directivas.</div>'; return; }
+  $('directivesList').innerHTML = list.map((x,i)=>`<div class="chat-item" style="cursor:default"><div class="jid">#${i+1}</div><div class="preview" style="white-space:normal">${esc(x.text||x)}</div><div class="meta"><span>${esc(fmtTs(x.addedAt))}</span><span>${esc(x.from||'')}</span></div></div>`).join('');
+}
+async function addDirective(){
+  const text = $('newDirective').value.trim();
+  if(!text) return;
+  const r = await api('/admin/directives', {method:'POST', body:JSON.stringify({text})});
+  $('directiveStatus').textContent = r.ok ? 'Directiva guardada.' : ('Error: '+(r.error||''));
+  if(r.ok){ $('newDirective').value=''; loadDirectives(); loadDashboard(); }
+}
+async function clearDirectives(){
+  if(!confirm('¿Borrar todas las directivas?')) return;
+  await api('/admin/directives/clear', {method:'POST'});
+  loadDirectives(); loadDashboard();
+}
+
+async function loadPayments(){
+  const d = await api('/admin/payments');
+  const rows = d.recent || [];
+  if(!rows.length){ $('paymentsWrap').innerHTML='<div class="empty">Sin pagos registrados.</div>'; return; }
+  $('paymentsWrap').innerHTML = `<table><thead><tr><th>Fecha</th><th>Chat</th><th>Estado</th><th>Monto</th><th>Operación</th><th>Archivo</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${esc(fmtTs(p.ts))}</td><td>${esc(p.from||'')}</td><td>${esc(p.status||'')}</td><td>${esc((p.amount||'')+' '+(p.currency||''))}</td><td>${esc(p.operation||p.operationNumber||'')}</td><td>${esc(p.imagePath||p.file||'')}</td></tr>`).join('')}</tbody></table>`;
+}
+async function clearPayments(){ if(!confirm('¿Borrar registro de pagos?')) return; await api('/admin/payments/clear',{method:'POST'}); loadPayments(); }
+
+async function loadConfig(){
+  const d = await api('/admin/state');
+  $('cfgProvider').value = d.provider || 'openrouter';
+  $('cfgModel').value = d.model || '';
+  $('cfgPrompt').value = d.prompt || '';
+  $('cfgKeywords').value = (d.keywords||[]).join('\n');
+  $('cfgOps').value = (d.paymentOperators||[]).join('\n');
+  $('cfgStatus').textContent = 'Configuración cargada.';
+}
+async function saveConfig(){
+  const payload = {
+    provider: $('cfgProvider').value,
+    model: $('cfgModel').value,
+    prompt: $('cfgPrompt').value,
+    keywords: $('cfgKeywords').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    paymentOperators: $('cfgOps').value.split('\n').map(s=>s.trim()).filter(Boolean)
+  };
+  const r = await api('/admin/state', {method:'PUT', body:JSON.stringify(payload)});
+  $('cfgStatus').textContent = r.ok ? 'Guardado correctamente.' : ('Error: '+(r.error||''));
+  if(r.ok) loadDashboard();
+}
+
+loadDashboard();
+setInterval(()=>{ const active=document.querySelector('.nav button.active')?.dataset.panel; if(active==='dashboard') loadDashboard(); if(active==='chats' && currentChat) openChat(currentChat,true); }, 15000);
+</script>
+</body>
+</html>

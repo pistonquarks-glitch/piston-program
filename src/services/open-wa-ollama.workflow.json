@@ -1,0 +1,105 @@
+{
+  "name": "Open-WA AI Bridge",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "open-wa",
+        "method": "POST",
+        "responseMode": "lastNode",
+        "jsonResponse": true,
+        "options": {}
+      },
+      "name": "Open-WA Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "webhookId": "open-wa-webhook-001",
+      "webhookMethod": "POST",
+      "path": "open-wa"
+    },
+    {
+      "name": "Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "method": "POST",
+      "url": "http://host.docker.internal:11434/api/generate",
+      "sendHeaders": {
+        "Content-Type": "application/json"
+      },
+      "sendBody": true,
+      "jsonParameters": true,
+      "options": {},
+      "bodyParameters": {
+        "parameters": [
+          {
+            "name": "model",
+            "value": "qwen2.5-coder:3b"
+          },
+          {
+            "name": "prompt",
+            "value": "={{ $json.payload?.body || $json.body || 'Sin texto' }}"
+          },
+          {
+            "name": "stream",
+            "value": false
+          }
+        ]
+      },
+      "responseFormat": "json"
+    },
+    {
+      "name": "Open-WA Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "method": "POST",
+      "url": "http://localhost:2785/api/send-message",
+      "sendHeaders": {
+        "Content-Type": "application/json"
+      },
+      "sendBody": true,
+      "jsonParameters": true,
+      "options": {},
+      "bodyParameters": {
+        "parameters": [
+          {
+            "name": "session",
+            "value": "={{ $json.session || 'default' }}"
+          },
+          {
+            "name": "text",
+            "value": "={{ $json.response || $json.output || '' }}"
+          }
+        ]
+      },
+      "responseFormat": "json"
+    }
+  ],
+  "connections": {
+    "Open-WA Webhook": {
+      "main": [
+        [
+          {
+            "node": "Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama": {
+      "main": [
+        [
+          {
+            "node": "Open-WA Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "open-wa-ollama-ai-bridge"
+}

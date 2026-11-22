@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #F4F4F1;
+    color: #1A1A1A;
+  }
+
+  .font-serif {
+    font-family: 'Instrument Serif', Georgia, serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Editorial Aesthetic styling utilities */
+.editorial-bg {
+  background-color: #F4F4F1;
+}
+
+.editorial-border {
+  border-color: #1A1A1A;
+}
+
+.editorial-border-subtle {
+  border-color: rgba(26, 26, 26, 0.15);
+}
+
+.editorial-blue {
+  color: #3B44FF;
+}
+
+.bg-editorial-blue {
+  background-color: #3B44FF;
+}
+
+.editorial-orange {
+  color: #FF6321;
+}
+
+.bg-editorial-orange {
+  background-color: #FF6321;
+}
+
+.editorial-neon {
+  color: #00FF00;
+}
+
+.bg-editorial-neon {
+  background-color: #00FF00;
+}
+
+/* Custom scrollbar for crisp editorial look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4F4F1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1A1A1A;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B44FF;
+}
