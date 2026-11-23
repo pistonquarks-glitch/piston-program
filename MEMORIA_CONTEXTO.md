@@ -50,3 +50,9 @@ _Actualizado: 2026-11-23_
 - `ADMIN_TOKEN`: si se configura, protege APIs `/admin/*` con `X-Admin-Token`; panel pide token y lo guarda en localStorage.
 - Auditoría: `audit.log` en DATA_DIR para acciones sensibles (send, state, directives, sesiones, programados, ai-assist).
 - `.env.example` actualizado con `ADMIN_BIND` y `ADMIN_TOKEN`.
+## Repos y campaña (2026-11-23)
+- EXE recompilado con logo: `dist/piston-logo.ico` aplicado en Inno Setup (`SetupIconFile`), generado `dist/PistonBot-Instalador-MVP-PanelAI.exe`.
+- Repo público creado: https://github.com/pistonquarks-glitch/piston-bot (README, assets, arquitectura público/privado, campaña FB/LinkedIn).
+- Repo privado creado: https://github.com/pistonquarks-glitch/piston-bot-core (scaffold README, .gitignore, estado pendiente de licenciamiento/activación).
+- Modelo: público = distribución/docs/marketing; privado = motor/licencias/recursos premium, acceso autorizado/pago. Instalador unificado debe verificar licencia antes de habilitar core privado (pendiente implementar).
+- Campaña FB/LinkedIn redactada en `docs/marketing/CAMPANA_FB_LINKEDIN.md`.
