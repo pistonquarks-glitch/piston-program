@@ -3,16 +3,21 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawn } = require('child_process');
 const paymentVerifier = require('./paymentVerifier');
 const conversationGate = require('./conversationGate');
 
-const PORT = 2013;
+const PORT = parseInt(process.env.PORT || '2013', 10);
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OPENWA_URL = 'http://127.0.0.1:2785';
 // API key del cliente Open-WA (usada en send-text y para descargar medios)
 const OPENWA_API_KEY = process.env.OPENWA_API_KEY || '';
-const PAYMENTS_FILE = path.join(__dirname, '..', 'payments.jsonl');
-const MEDIA_TMP_DIR = path.join(__dirname, '..', 'payments');
+const DATA_DIR = process.env.SESSION_DATA_DIR ? path.resolve(process.env.SESSION_DATA_DIR) : path.join(__dirname, '..');
+const SESSION_NAME = process.env.SESSION_NAME || 'Principal';
+const SESSION_SLUG = process.env.SESSION_SLUG || 'principal';
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
+const MEDIA_TMP_DIR = path.join(DATA_DIR, 'payments');
 const DEFAULT_MODEL = 'qwen2.5-coder:3b'; // Modelo local (Ollama) o remoto (OpenRouter) segun BOT_PROVIDER
 const DEFAULT_PROVIDER = 'ollama'; // 'ollama' | 'openrouter'
 let BOT_PROVIDER = DEFAULT_PROVIDER;
@@ -33,10 +38,10 @@ let SYSTEM_PROMPT = DEFAULT_SYSTEM_PROMPT;
 // Estado editable del bot (palabras/frases de activaciÃ³n + prompt de entrenamiento)
 const DEFAULT_KEYWORDS = ['precio', 'catÃ¡logo', 'catalogo', 'planes', 'servicios', 'hola', 'informaciÃ³n', 'informacion'];
 let BOT_STATE_KEYWORDS = [...DEFAULT_KEYWORDS];
-const BOT_STATE_FILE = path.join(__dirname, '..', 'bot_state.json');
-const ACTIONS_FILE = path.join(__dirname, '..', 'bot_actions.json');
-const DIRECTIVES_FILE = path.join(__dirname, '..', 'bot_directives.json');
-const LOG_FILE = path.join(__dirname, '..', 'bot_events.log');
+const BOT_STATE_FILE = path.join(DATA_DIR, 'bot_state.json');
+const ACTIONS_FILE = path.join(DATA_DIR, 'bot_actions.json');
+const DIRECTIVES_FILE = path.join(DATA_DIR, 'bot_directives.json');
+const LOG_FILE = path.join(DATA_DIR, 'bot_events.log');
 // Operadores de pagos autorizados (OCR): por defecto el numero de soporte principal.
 // Editable desde el panel admin (/admin/state, campo paymentOperators).
 const DEFAULT_PAYMENT_OPERATORS = []; // fail-closed: ningun numero autorizado por defecto; agregar desde /admin
@@ -446,7 +451,7 @@ function readRecentEvents(limit = 200) {
 
 function readChatState() {
     try {
-        const chatFile = path.join(__dirname, '..', 'chat_state.json');
+        const chatFile = path.join(DATA_DIR, 'chat_state.json');
         if (!fs.existsSync(chatFile)) return {};
         const parsed = JSON.parse(fs.readFileSync(chatFile, 'utf8'));
         return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
@@ -683,6 +688,115 @@ function isSendOk(sendResult) {
     } catch (e) {
         return false;
     }
+}
+
+// Asistente IA del panel (no usa historial del bot cliente; usa contexto de chats para análisis).
+async function callAssistantAI(systemPrompt, userPrompt) {
+    const isOpenRouter = (BOT_PROVIDER === 'openrouter');
+    const target = isOpenRouter ? OPENROUTER_ENDPOINT : OLLAMA_URL;
+    const requestHeaders = isOpenRouter
+        ? {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (process.env.OPENROUTER_API_KEY || ''),
+            'HTTP-Referer': 'https://pistonquarks.store',
+            'X-Title': 'Piston Panel Assistant'
+        }
+        : { 'Content-Type': 'application/json' };
+    const body = isOpenRouter
+        ? JSON.stringify({ model: BOT_MODEL, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], stream: false, max_tokens: 900, temperature: 0.4 })
+        : JSON.stringify({ model: BOT_MODEL, prompt: systemPrompt + '\n\n' + userPrompt, stream: false, options: { num_ctx: 4096, num_predict: 700, temperature: 0.4 } });
+    const reqMod = target.startsWith('https://') ? https : http;
+    return await new Promise((resolve) => {
+        const req = reqMod.request(target, { method: 'POST', headers: requestHeaders }, (res) => {
+            let responseBody = '';
+            res.on('data', (chunk) => responseBody += chunk);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(responseBody);
+                    let aiText = '';
+                    if (isOpenRouter) {
+                        const msg = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message;
+                        aiText = (msg && (msg.content || msg.reasoning || msg.reasoning_content || msg.text)) || '';
+                    } else {
+                        aiText = (parsed && (parsed.response || (parsed.message && parsed.message.content) || '')) || '';
+                    }
+                    resolve(String(aiText || '').trim());
+                } catch (e) { resolve(''); }
+            });
+        });
+        req.on('error', () => resolve(''));
+        req.setTimeout(60000, () => { req.destroy(); resolve(''); });
+        req.write(body);
+        req.end();
+    });
+}
+
+function buildChatTranscript(jid, limit = 80) {
+    const events = chatEvents(jid, limit);
+    const lines = [];
+    for (const ev of events) {
+        if (ev.msg === 'webhook_received' && ev.text) lines.push(`[CLIENTE ${ev.ts || ''}] ${String(ev.text).replace(/\s+/g, ' ').slice(0, 500)}`);
+        if ((ev.msg === 'ai_sent' || ev.msg === 'action_sent' || ev.msg === 'calc_huanuco_sent' || ev.msg === 'panel_send') && (ev.reply || ev.text)) {
+            lines.push(`[BOT/HUMANO ${ev.ts || ''} ${ev.msg}] ${String(ev.reply || ev.text).replace(/\s+/g, ' ').slice(0, 500)}`);
+        }
+    }
+    return lines.slice(-limit).join('\n');
+}
+
+function collectOwnerStyleSample(maxChats = 25, perChat = 20) {
+    const chats = summarizeChats(maxChats);
+    const samples = [];
+    for (const c of chats) {
+        const events = chatEvents(c.jid, perChat);
+        for (const ev of events) {
+            if ((ev.msg === 'panel_send' || ev.msg === 'human_alert_sent') && (ev.text || ev.reply)) {
+                samples.push(String(ev.text || ev.reply).replace(/\s+/g, ' ').slice(0, 280));
+            }
+        }
+    }
+    return samples.slice(-120);
+}
+
+const SCHEDULED_FILE = path.join(DATA_DIR, 'scheduled_messages.json');
+function readScheduled() { try { if (fs.existsSync(SCHEDULED_FILE)) return JSON.parse(fs.readFileSync(SCHEDULED_FILE, 'utf8')); } catch (e) {} return []; }
+function writeScheduled(items) { try { fs.writeFileSync(SCHEDULED_FILE, JSON.stringify(items, null, 2), 'utf8'); } catch (e) {} }
+
+const ASSIST_HISTORY_FILE = path.join(DATA_DIR, 'assistant_history.json');
+function readAssistHistory() { try { if (fs.existsSync(ASSIST_HISTORY_FILE)) return JSON.parse(fs.readFileSync(ASSIST_HISTORY_FILE, 'utf8')); } catch (e) {} return { messages: [], plans: [] }; }
+function writeAssistHistory(data) { try { fs.writeFileSync(ASSIST_HISTORY_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {} }
+function pushAssistHistory(entry) {
+    const data = readAssistHistory();
+    data.messages = Array.isArray(data.messages) ? data.messages : [];
+    data.messages.push(entry);
+    if (data.messages.length > 200) data.messages = data.messages.slice(-200);
+    writeAssistHistory(data);
+    return data;
+}
+
+const SESSIONS_REGISTRY = path.join(__dirname, '..', 'sessions_registry.json');
+function readSessionsRegistry() { try { if (fs.existsSync(SESSIONS_REGISTRY)) return JSON.parse(fs.readFileSync(SESSIONS_REGISTRY, 'utf8')); } catch (e) {} return []; }
+function writeSessionsRegistry(items) { try { fs.writeFileSync(SESSIONS_REGISTRY, JSON.stringify(items, null, 2), 'utf8'); } catch (e) {} }
+function slugify(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || ('session-'+Date.now()); }
+function ensureSessionFiles(dir, cfg) {
+    fs.mkdirSync(dir, { recursive: true });
+    const defaults = {
+        'bot_state.json': JSON.stringify({ keywords: cfg.keywords||[], prompt: cfg.prompt||SYSTEM_PROMPT, provider: cfg.provider||BOT_PROVIDER, model: cfg.model||BOT_MODEL, paymentOperators: cfg.paymentOperators||PAYMENT_OPERATORS }, null, 2),
+        'bot_directives.json': JSON.stringify({ directives: cfg.directives||[] }, null, 2),
+        'bot_actions.json': fs.existsSync(path.join(__dirname,'..','bot_actions.json')) ? fs.readFileSync(path.join(__dirname,'..','bot_actions.json'),'utf8') : JSON.stringify({actions:[]},null,2),
+        'chat_state.json': '{}',
+        'payments.jsonl': '',
+        'scheduled_messages.json': '[]',
+        'assistant_history.json': JSON.stringify({messages:[],plans:[]},null,2)
+    };
+    for (const [name, content] of Object.entries(defaults)) {
+        const p = path.join(dir,name);
+        if (!fs.existsSync(p)) fs.writeFileSync(p, content, 'utf8');
+    }
+}
+function sessionRuntimeStatus(item) {
+    const st = { ...item, running: false };
+    try { if (item.pid) { process.kill(Number(item.pid), 0); st.running = true; } } catch (e) { st.running = false; }
+    return st;
 }
 
 // Aviso interno a Rony cuando el bot no puede resolver algo (relevo real a humano).
@@ -1042,6 +1156,18 @@ const server = http.createServer(async (req, res) => {
                 try { logEvent('error', 'webhook_error', { error: String(error && error.message || error) }); } catch (e) {}
             }
         });
+    } else if (pathname === '/admin/manifest.webmanifest' && req.method === 'GET') {
+        try { const p = path.join(__dirname, '..', 'manifest.webmanifest'); res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' }); res.end(fs.readFileSync(p)); } catch(e){ res.writeHead(404); res.end(); }
+        return;
+    } else if (pathname === '/admin/sw.js' && req.method === 'GET') {
+        try { const p = path.join(__dirname, '..', 'sw.js'); res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Service-Worker-Allowed': '/admin/' }); res.end(fs.readFileSync(p)); } catch(e){ res.writeHead(404); res.end(); }
+        return;
+    } else if (pathname === '/admin/icon-192.png' && req.method === 'GET') {
+        try { const p = path.join(__dirname, '..', 'icon-192.png'); res.writeHead(200, { 'Content-Type': 'image/png' }); res.end(fs.readFileSync(p)); } catch(e){ res.writeHead(404); res.end(); }
+        return;
+    } else if (pathname === '/admin/icon-512.png' && req.method === 'GET') {
+        try { const p = path.join(__dirname, '..', 'icon-512.png'); res.writeHead(200, { 'Content-Type': 'image/png' }); res.end(fs.readFileSync(p)); } catch(e){ res.writeHead(404); res.end(); }
+        return;
     } else if (pathname === '/admin' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(getAdminHtml());
@@ -1127,6 +1253,185 @@ const server = http.createServer(async (req, res) => {
             }
         });
         return;
+    } else if (pathname === '/admin/ai-assist' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', async () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const message = String(parsed.message || '').trim();
+            const jid = String(parsed.jid || '').trim();
+            const mode = String(parsed.mode || 'chat').trim();
+            const objective = String(parsed.objective || '').trim();
+            const assistantMode = String(parsed.assistantMode || 'plan').trim().toLowerCase() === 'execute' ? 'execute' : 'plan';
+            const confirm = !!parsed.confirm;
+            if (!message && !mode) { res.writeHead(400); res.end(JSON.stringify({ error: 'message requerido' })); return; }
+
+            const chatState = jid ? (readChatState()[jid] || {}) : {};
+            const transcript = jid ? buildChatTranscript(jid, 120) : '';
+            const styleSample = (mode === 'style_massive' || mode === 'style_one') ? collectOwnerStyleSample(mode === 'style_massive' ? 40 : 10, 25) : [];
+            const caps = {
+                puede: ['Analizar conversaciones seleccionadas o en muestra masiva', 'Resumir contexto, intención, objeciones y etapa', 'Sugerir respuestas con variantes', 'Extraer estilo de comunicación del dueño', 'Preparar borradores y programaciones locales', 'Guardar historial del asistente en el panel'],
+                no_puede_sin_confirmacion: ['Enviar mensajes al cliente por sí mismo en modo plan', 'Cambiar configuración crítica sin revisión', 'Prometer pagos/acciones externas no verificadas'],
+                modo: assistantMode
+            };
+            const system = [
+                'Eres Piston Bot Assistant: asesor especializado en comunicación y ventas por WhatsApp para el dueño del negocio.',
+                'Tu enfoque: entender contexto, intención, objeciones, etapa del embudo y objetivo comercial; responder con claridad, empatía y orientación a conversión sin presión.',
+                'Primero confirma que entendiste en una línea: "Entendido: ..."',
+                'Luego responde con estructura: 1) Entendido 2) Análisis de venta/contexto 3) Plan o Ejecución 4) Respuesta sugerida 5) Variante corta 6) Siguiente paso.',
+                'Si assistantMode=plan: NO ejecutes acciones; solo diagnostica, propone estrategia y pide confirmación antes de ejecutar.',
+                'Si assistantMode=execute: prepara borradores listos para usar; si hay acción sensible (enviar, programar, cambiar config) márcala como "ACCIÓN PENDIENTE DE CONFIRMACIÓN" salvo confirm=true.',
+                'Adapta tono al estilo del dueño cuando haya muestra. No inventes datos, precios no autorizados ni promesas imposibles.',
+                'Si conviene programar seguimiento, sugiere fecha/hora, objetivo y texto propuesto.'
+            ].join(' ');
+            let userPrompt = `assistantMode=${assistantMode}\nconfirm=${confirm}\nMODO=${mode}\nOBJETIVO=${objective || '(no especificado)'}\nJID=${jid || '(ninguno)'}\nCAPACIDADES=${JSON.stringify(caps)}\nESTADO_CHAT=${JSON.stringify(chatState).slice(0, 2000)}\n`;
+            if (transcript) userPrompt += `\nTRANSCRIPCION_RECIENTE:\n${transcript}\n`;
+            if (styleSample.length) userPrompt += `\nMUESTRA_ESTILO_HUMANO_DUENO:\n- ${styleSample.join('\n- ')}\n`;
+            userPrompt += `\nSOLICITUD_DEL_OPERADOR:\n${message || 'Analiza y responde.'}`;
+
+            const reply = await callAssistantAI(system, userPrompt);
+            const entry = { ts: new Date().toISOString(), role: 'exchange', jid, mode, assistantMode, objective, message, reply: reply || '', confirm };
+            pushAssistHistory(entry);
+            logEvent('info', 'panel_ai_assist', { mode, assistantMode, jid, objective: objective.slice(0, 120), ok: !!reply });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: !!reply, reply: reply || 'No pude generar respuesta con el modelo actual. Verifica OPENROUTER_API_KEY/modelo.', mode, assistantMode, jid, caps }));
+        });
+        return;
+    } else if (pathname === '/admin/ai-history' && req.method === 'GET') {
+        const data = readAssistHistory();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+    } else if (pathname === '/admin/ai-history/clear' && req.method === 'POST') {
+        writeAssistHistory({ messages: [], plans: [] });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+    } else if (pathname === '/admin/scheduled' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ items: readScheduled() }));
+        return;
+    } else if (pathname === '/admin/scheduled' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const jid = String(parsed.jid || parsed.chatId || '').trim();
+            const text = String(parsed.text || '').trim();
+            const sendAt = String(parsed.sendAt || '').trim();
+            if (!jid || !text || !sendAt) { res.writeHead(400); res.end(JSON.stringify({ error: 'jid, text, sendAt requeridos' })); return; }
+            const items = readScheduled();
+            const item = { id: 'sch_' + Date.now() + '_' + Math.random().toString(36).slice(2,8), jid, text, sendAt, createdAt: new Date().toISOString(), status: 'pending' };
+            items.push(item); writeScheduled(items);
+            logEvent('info', 'panel_schedule_created', { jid, sendAt });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, item, items }));
+        });
+        return;
+    } else if (pathname === '/admin/scheduled/cancel' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const id = String(parsed.id || '').trim();
+            const items = readScheduled();
+            const item = items.find(x => x.id === id);
+            if (item) { item.status = 'cancelled'; item.cancelledAt = new Date().toISOString(); writeScheduled(items); }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: !!item, items }));
+        });
+        return;
+    } else if (pathname === '/admin/scheduled/delete' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const id = String(parsed.id || '').trim();
+            const items = readScheduled().filter(x => x.id !== id);
+            writeScheduled(items);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, items }));
+        });
+        return;
+    } else if (pathname === '/admin/sessions' && req.method === 'GET') {
+        const items = readSessionsRegistry().map(sessionRuntimeStatus);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, current: { port: PORT, sessionName: SESSION_NAME, sessionSlug: SESSION_SLUG, dataDir: DATA_DIR }, items }));
+        return;
+    } else if (pathname === '/admin/sessions/create' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const name = String(parsed.name || '').trim() || ('Sesión ' + (readSessionsRegistry().length + 1));
+            const slug = slugify(parsed.slug || name);
+            const port = Number(parsed.port || 0) || (2013 + readSessionsRegistry().length + 1);
+            const waUrl = String(parsed.waUrl || process.env.OPENWA_URL || 'http://127.0.0.1:2785').trim();
+            const waSession = String(parsed.waSession || '').trim();
+            const provider = String(parsed.provider || BOT_PROVIDER || 'openrouter').trim();
+            const model = String(parsed.model || BOT_MODEL || '').trim();
+            const keywords = Array.isArray(parsed.keywords) ? parsed.keywords.map(x=>String(x).trim()).filter(Boolean) : (String(parsed.keywords||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean));
+            const prompt = String(parsed.prompt || SYSTEM_PROMPT || '').trim();
+            const businessInfo = String(parsed.businessInfo || '').trim();
+            const dir = path.join(__dirname, '..', 'sessions', slug);
+            ensureSessionFiles(dir, { keywords, prompt, provider, model, paymentOperators: PAYMENT_OPERATORS, directives: businessInfo ? [{ text: 'INFORMACIÓN DEL NEGOCIO: ' + businessInfo, addedAt: new Date().toISOString() }] : [] });
+            const items = readSessionsRegistry();
+            if (items.some(x => x.slug === slug || Number(x.port) === Number(port))) { res.writeHead(400); res.end(JSON.stringify({ error: 'slug o puerto ya existe' })); return; }
+            const item = { id: 'ses_' + Date.now(), slug, name, port, waUrl, waSession, provider, model, keywords, businessInfo, dataDir: dir, createdAt: new Date().toISOString(), status: 'stopped', pid: null };
+            items.push(item); writeSessionsRegistry(items);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, item, panelUrl: 'http://127.0.0.1:' + port + '/admin' }));
+        });
+        return;
+    } else if (pathname === '/admin/sessions/start' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const slug = String(parsed.slug || '').trim();
+            const items = readSessionsRegistry();
+            const item = items.find(x => x.slug === slug);
+            if (!item) { res.writeHead(404); res.end(JSON.stringify({ error: 'sesión no encontrada' })); return; }
+            const st = sessionRuntimeStatus(item);
+            if (st.running) { res.writeHead(200); res.end(JSON.stringify({ ok: true, item: st, alreadyRunning: true })); return; }
+            const projectRoot = path.join(__dirname, '..', '..');
+            const env = { ...process.env, PORT: String(item.port), SESSION_DATA_DIR: item.dataDir, SESSION_NAME: item.name, SESSION_SLUG: item.slug, OPENWA_URL: item.waUrl || process.env.OPENWA_URL || '', OPENWA_SESSION: item.waSession || process.env.OPENWA_SESSION || '' };
+            try {
+                const child = spawn(process.execPath, [path.join(projectRoot, 'src', 'services', 'bridgeTest.js')], { cwd: projectRoot, env, detached: true, stdio: 'ignore', windowsHide: true });
+                child.unref();
+                item.pid = child.pid; item.status = 'running'; item.startedAt = new Date().toISOString();
+                writeSessionsRegistry(items);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, item, panelUrl: 'http://127.0.0.1:' + item.port + '/admin' }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: false, error: String(e && e.message || e) }));
+            }
+        });
+        return;
+    } else if (pathname === '/admin/sessions/stop' && req.method === 'POST') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            let parsed = {};
+            try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'JSON inválido' })); return; }
+            const slug = String(parsed.slug || '').trim();
+            const items = readSessionsRegistry();
+            const item = items.find(x => x.slug === slug);
+            if (!item) { res.writeHead(404); res.end(JSON.stringify({ error: 'sesión no encontrada' })); return; }
+            try { if (item.pid) process.kill(Number(item.pid)); } catch (e) {}
+            item.status = 'stopped'; item.stoppedAt = new Date().toISOString();
+            writeSessionsRegistry(items);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, item }));
+        });
+        return;
     } else if (pathname === '/admin/actions' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ actions: BOT_ACTIONS }));
@@ -1157,7 +1462,7 @@ const server = http.createServer(async (req, res) => {
         return;
     } else if (pathname === '/admin/state' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ...getBotState(), sessionId: LAST_SESSION_ID, actionsCount: BOT_ACTIONS.length, directivesCount: BOT_DIRECTIVES.length }));
+        res.end(JSON.stringify({ ...getBotState(), sessionId: LAST_SESSION_ID, sessionName: SESSION_NAME, sessionSlug: SESSION_SLUG, port: PORT, dataDir: DATA_DIR, actionsCount: BOT_ACTIONS.length, directivesCount: BOT_DIRECTIVES.length }));
         return;
     } else if (pathname === '/admin/payments' && req.method === 'GET') {
         let recent = [];
@@ -1201,6 +1506,31 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
+async function tickScheduledMessages() {
+    const items = readScheduled();
+    const now = Date.now();
+    let changed = false;
+    for (const item of items) {
+        if (!item || item.status !== 'pending') continue;
+        const due = Date.parse(item.sendAt);
+        if (!due || due > now) continue;
+        try {
+            const result = await sendToWhatsApp(LAST_SESSION_ID, item.jid, item.text);
+            const ok = isSendOk(result);
+            item.status = ok ? 'sent' : 'error';
+            item.sentAt = new Date().toISOString();
+            item.result = String(result || '').slice(0, 300);
+            changed = true;
+            logEvent(ok ? 'info' : 'warn', 'scheduled_send', { id: item.id, jid: item.jid, ok });
+        } catch (e) {
+            item.status = 'error';
+            item.error = String(e && e.message || e).slice(0, 300);
+            changed = true;
+        }
+    }
+    if (changed) writeScheduled(items);
+}
+
 server.listen(PORT, '0.0.0.0', () => {
     console.log('ðŸš€ Puente Piston Quarks activo en puerto ' + PORT);
     console.log('ðŸŒ Esperando webhooks en http://localhost:' + PORT + '/webhook');
@@ -1209,4 +1539,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('ðŸ¤– IA configurada: ' + BOT_PROVIDER + ' / ' + BOT_MODEL);
     console.log('ðŸŽ¯ Acciones predefinidas cargadas: ' + BOT_ACTIONS.length);
     console.log('ðŸ”‘ OPENROUTER_API_KEY configurada: ' + (process.env.OPENROUTER_API_KEY ? 'SI' : 'NO'));
+    setInterval(() => { tickScheduledMessages().catch(() => {}); }, 30000);
 });

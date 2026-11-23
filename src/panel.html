@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pistón Panel — Bot WhatsApp</title>
+<title>Piston Panel - Bot WhatsApp</title>
+<link rel="manifest" href="/admin/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/admin/icon-192.png">
 <style>
   :root{--bg:#0b1220;--bg2:#121b2f;--card:#17233b;--card2:#1d2c47;--line:#243754;--text:#ecf2ff;--muted:#93a7c4;--accent:#f2b632;--accent2:#ffd46f;--ok:#34d399;--warn:#f59e0b;--bad:#f87171;--blue:#60a5fa}
   *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#08101d,#0b1220 30%,#0a1322);color:var(--text)}
@@ -103,10 +109,86 @@
           <div class="toolbar"><strong>Gate / Compuerta</strong><button class="btn ghost" onclick="loadGate()">Actualizar</button></div>
           <pre id="gateBox">Cargando...</pre>
         </div>
+        <div class="card" style="margin-top:16px">
+          <div class="toolbar"><strong>Sesiones / Puertos WhatsApp</strong><button class="btn ghost" onclick="loadSessions()">Actualizar</button></div>
+          <div class="small muted" style="margin-bottom:10px">Crea sesiones separadas (otro número/puerto/panel/config) para operar varios WhatsApp sin mezclar datos.</div>
+          <div class="two">
+            <div>
+              <div class="field"><label>Nombre de sesión</label><input id="sesName" placeholder="Ej: Ventas WhatsApp 2"></div>
+              <div class="two">
+                <div class="field"><label>Puerto</label><input id="sesPort" type="number" placeholder="2015"></div>
+                <div class="field"><label>Slug (auto si vacío)</label><input id="sesSlug" placeholder="ventas-2"></div>
+              </div>
+              <div class="field"><label>Open-WA URL</label><input id="sesWaUrl" placeholder="http://127.0.0.1:2785"></div>
+              <div class="field"><label>Open-WA Session ID</label><input id="sesWaSession" placeholder="session id"></div>
+              <div class="two">
+                <div class="field"><label>Proveedor</label><input id="sesProvider" placeholder="openrouter"></div>
+                <div class="field"><label>Modelo</label><input id="sesModel" placeholder="baidu/ernie-4.5-21b-a3b"></div>
+              </div>
+              <div class="field"><label>Palabras clave (coma o línea)</label><textarea id="sesKeywords" style="min-height:70px" placeholder="precio, plan, demo"></textarea></div>
+              <div class="field"><label>Información del negocio</label><textarea id="sesBiz" style="min-height:70px" placeholder="Qué vendes, horarios, precios, zona, políticas..."></textarea></div>
+              <div class="toolbar"><button class="btn" onclick="createSession()">Crear sesión</button><button class="btn ghost" onclick="createAndStartSession()">Crear e iniciar</button></div>
+              <div id="sesStatus" class="small muted"></div>
+            </div>
+            <div>
+              <div class="field"><label>Sesiones registradas</label><div id="sessionsList" class="list" style="max-height:420px"><div class="empty">Cargando...</div></div></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section id="panel-chats" class="panel">
+      <div class="card" style="margin-bottom:16px">
+        <div class="toolbar">
+          <div><strong>Asistente IA de Ventas WhatsApp (Piston Bot)</strong><div class="small muted">Asesor especializado en comunicación y ventas por WhatsApp. Modo Plan/Ejecución, confirmación de entendido, historial y delegación de objetivos. No ejecuta acciones sensibles sin tu confirmación.</div></div>
+          <div class="toolbar" style="margin:0">
+            <select id="assistantMode" style="width:auto;padding:8px"><option value="plan">Modo Plan</option><option value="execute">Modo Ejecución</option></select>
+            <span class="badge bot" id="assistantModeBadge">PLAN</span>
+          </div>
+        </div>
+        <div class="two">
+          <div>
+            <div class="field"><label>Objetivo / instrucción para la IA</label><textarea id="aiObjective" style="min-height:80px" placeholder="Ej: Estudia la conversación con este número y dime qué responder para cerrar la venta del plan 299 sin sonar insistente."></textarea></div>
+            <div class="field"><label>Mensaje directo a la IA</label><textarea id="aiPrompt" style="min-height:80px" placeholder="Ej: Analiza este chat, confirma que entendiste y dame un plan antes de ejecutar."></textarea></div>
+            <div class="toolbar">
+              <button class="btn" onclick="sendAiAssist('chat')">Enviar a IA</button>
+              <button class="btn ghost" onclick="sendAiAssist('chat', true)">Enviar y confirmar entendido</button>
+              <button class="btn ghost" onclick="studyCurrentChat()">Estudiar chat seleccionado</button>
+            </div>
+            <div class="toolbar">
+              <button class="btn ghost" onclick="suggestReplyObjective()">Sugerir respuesta</button>
+              <button class="btn ghost" onclick="studyStyleOne()">Aprender estilo (chat)</button>
+              <button class="btn ghost" onclick="studyStyleMassive()">Aprender estilo masivo</button>
+            </div>
+            <div class="card" style="margin-top:10px;padding:12px;background:rgba(0,0,0,.12)">
+              <div class="small muted" style="margin-bottom:6px"><strong style="color:var(--text)">Delegar / Programar mensaje</strong> (guardado local; bridge envía cuando llega la hora)</div>
+              <div class="two">
+                <div class="field"><label>Fecha y hora</label><input id="schedAt" type="datetime-local"></div>
+                <div class="field"><label>Chat/JID destino</label><input id="schedJid" placeholder="Se llena con chat seleccionado"></div>
+              </div>
+              <div class="field"><label>Mensaje a programar</label><textarea id="schedText" style="min-height:60px" placeholder="Texto que se enviará..."></textarea></div>
+              <div class="toolbar"><button class="btn ghost" onclick="scheduleMessage()">Guardar programado</button><button class="btn ghost" onclick="loadScheduled()">Ver programados</button></div>
+              <div id="schedStatus" class="small muted" style="margin-top:8px"></div>
+            </div>
+          </div>
+          <div>
+            <div class="field"><label>Respuesta del asistente IA</label><pre id="aiReply" style="height:260px;max-height:260px">Aquí aparecerá el análisis, confirmación de entendido, plan o borrador...</pre></div>
+            <div class="toolbar">
+              <button class="btn ghost" onclick="useAiAsReply()">Usar como respuesta manual</button>
+              <button class="btn ghost" onclick="copyAiReply()">Copiar</button>
+              <button class="btn ghost" onclick="loadAiHistory()">Ver historial</button>
+              <button class="btn danger" onclick="clearAiHistory()">Borrar historial IA</button>
+            </div>
+            <div class="card" style="padding:12px;background:rgba(0,0,0,.12);margin-bottom:10px">
+              <div class="small muted"><strong style="color:var(--text)">Capacidades Piston Bot Assistant</strong></div>
+              <div class="small muted" id="aiCaps">Puede: analizar chats, diagnosticar venta, sugerir respuestas, extraer estilo, planificar seguimientos, preparar borradores y programaciones. No ejecuta acciones sensibles sin confirmación.</div>
+            </div>
+            <div id="aiHistoryBox" class="small muted"></div>
+            <div id="scheduledList" class="small muted"></div>
+          </div>
+        </div>
+      </div>
       <div class="row">
         <div class="card">
           <div class="toolbar"><strong>Chats</strong><button class="btn ghost" onclick="loadChats()">Actualizar</button></div>
@@ -216,7 +298,9 @@ async function loadDashboard(){
     $('gateBox').textContent = JSON.stringify({chats:gate.chats,humanTakeoverHours:gate.humanTakeoverHours,dedupeSeconds:gate.dedupeSeconds,strongTriggers:gate.strongTriggers,weakTriggers:gate.weakTriggers}, null, 2);
     $('statusPill').textContent = 'Bridge activo · ' + (state.provider||'') + ' / ' + (state.model||'');
   }catch(e){ $('statusPill').textContent = 'Error conectando al bridge'; }
-}
+
+    loadSessions();
+  }
 async function loadEvents(){ const e=await api('/admin/events?limit=40'); $('recentEvents').textContent=JSON.stringify(e.events||[],null,2); }
 async function loadGate(){ const g=await api('/admin/gate'); $('gateBox').textContent=JSON.stringify(g,null,2); }
 
@@ -285,6 +369,7 @@ function renderMessages(events, state){
 
 async function openChat(jid, silent){
   currentChat = jid;
+  if ($('schedJid')) $('schedJid').value = jid;
   $('chatTitle').textContent = jid;
   const d = await api('/admin/chat?jid='+encodeURIComponent(jid)+'&limit=150');
   const st = d.state || {};
@@ -369,6 +454,144 @@ async function saveConfig(){
   if(r.ok) loadDashboard();
 }
 
+async function sendAiAssist(mode='chat', confirm=false) {
+  const message = $('aiPrompt').value.trim();
+  const objective = $('aiObjective').value.trim();
+  const assistantMode = $('assistantMode') ? $('assistantMode').value : 'plan';
+  if (!message && !objective) { alert('Escribe una instrucción u objetivo para la IA.'); return; }
+  $('aiReply').textContent = assistantMode === 'plan' ? 'Analizando en Modo Plan...' : 'Preparando ejecución...';
+  const r = await api('/admin/ai-assist', {method:'POST', body:JSON.stringify({message, objective, jid: currentChat, mode, assistantMode, confirm})});
+  $('aiReply').textContent = r.reply || r.error || 'Sin respuesta.';
+  if (r.caps) $('aiCaps').textContent = 'Puede: ' + (r.caps.puede||[]).join(', ') + '. Sin confirmación: ' + (r.caps.no_puede_sin_confirmacion||[]).join(', ') + '. Modo: ' + (r.assistantMode||assistantMode).toUpperCase();
+  loadAiHistory();
+}
+
+async function studyCurrentChat() {
+  if (!currentChat) { alert('Selecciona un chat primero.'); return; }
+  $('aiPrompt').value = 'Estudia esta conversación completa, resume contexto, intención del cliente, objeciones, etapa del embudo y qué debe responder el dueño ahora.';
+  return sendAiAssist('study_one');
+}
+async function suggestReplyObjective() {
+  if (!currentChat) { alert('Selecciona un chat primero.'); return; }
+  const objective = $('aiObjective').value.trim() || 'Responder de forma clara, humana y avanzar al siguiente paso comercial sin presionar.';
+  $('aiObjective').value = objective;
+  $('aiPrompt').value = 'Con base en la conversación seleccionada y el objetivo, dame el mejor borrador de respuesta.';
+  return sendAiAssist('suggest_reply');
+}
+async function studyStyleOne() {
+  if (!currentChat) { alert('Selecciona un chat primero.'); return; }
+  $('aiPrompt').value = 'Analiza el estilo de comunicación del dueño en esta conversación: tono, palabras, conectores, emojis, longitud, emociones, forma de cerrar y abrir. Dame un perfil de estilo reutilizable.';
+  return sendAiAssist('style_one');
+}
+async function studyStyleMassive() {
+  $('aiPrompt').value = 'Analiza de forma masiva las conversaciones disponibles y extrae el estilo de comunicación del dueño: tono, palabras frecuentes, conectores, muletillas, emojis, ritmo, forma de preguntar, manejar objeciones y cerrar. Dame una guía de estilo operativa.';
+  return sendAiAssist('style_massive');
+}
+function useAiAsReply() {
+  const txt = $('aiReply').textContent || '';
+  const m = txt.match(/respuesta sugerida\s*:?\s*([\s\S]*?)(?:\n\s*\d\)|\n\s*variante|$)/i);
+  $('replyText').value = (m ? m[1].trim() : txt.trim()).slice(0, 2000);
+  $('replyText').focus();
+}
+async function copyAiReply() {
+  const txt = $('aiReply').textContent || '';
+  try { await navigator.clipboard.writeText(txt); } catch(e) { console.log(e); }
+}
+async function loadAiHistory() {
+  const r = await api('/admin/ai-history');
+  const msgs = (r.messages||[]).slice(-8).reverse();
+  if (!msgs.length) { $('aiHistoryBox').innerHTML = '<div class="small muted">Sin historial de asistente.</div>'; return; }
+  $('aiHistoryBox').innerHTML = '<div style="margin-top:8px"><strong>Historial reciente IA</strong>' + msgs.map(m=>`
+    <div class="chat-item" style="cursor:default;margin-top:6px">
+      <div class="meta"><span class="badge">${esc(m.assistantMode||'plan')}</span><span>${esc(fmtTs(m.ts))}</span><span>${esc(m.jid||'')}</span></div>
+      <div class="sub">${esc((m.message||'').slice(0,120))}</div>
+      <div class="preview" style="white-space:normal">${esc((m.reply||'').slice(0,180))}</div>
+    </div>`).join('') + '</div>';
+}
+async function clearAiHistory() {
+  await api('/admin/ai-history/clear', {method:'POST'});
+  loadAiHistory();
+  $('aiReply').textContent = 'Historial borrado. Aquí aparecerá el análisis...';
+}
+async function scheduleMessage() {
+  const jid = $('schedJid').value.trim() || currentChat;
+  const text = $('schedText').value.trim();
+  const at = $('schedAt').value;
+  if (!jid || !text || !at) { $('schedStatus').textContent = 'Falta chat/JID, mensaje o fecha/hora.'; return; }
+  const sendAt = new Date(at).toISOString();
+  const r = await api('/admin/scheduled', {method:'POST', body:JSON.stringify({jid, text, sendAt})});
+  $('schedStatus').textContent = r.ok ? 'Programado: ' + sendAt : ('Error: ' + (r.error||''));
+  if (r.ok) { $('schedText').value=''; loadScheduled(); }
+}
+async function loadScheduled() {
+  const r = await api('/admin/scheduled');
+  const items = r.items || [];
+  if (!items.length) { $('scheduledList').innerHTML = '<div class="small muted">No hay historial de programados.</div>'; return; }
+  $('scheduledList').innerHTML = '<div style="margin-top:10px"><strong>Historial de programados</strong>' + items.slice().reverse().map(it=>{
+    const st = it.status||'pending';
+    const canCancel = st === 'pending';
+    return `
+    <div class="chat-item" style="cursor:default;margin-top:6px">
+      <div class="meta"><span class="badge">${esc(st)}</span><span>${esc(fmtTs(it.sendAt))}</span>${it.sentAt?`<span>enviado: ${esc(fmtTs(it.sentAt))}</span>`:''}</div>
+      <div class="sub">${esc(it.jid||'')}</div>
+      <div class="preview" style="white-space:normal">${esc(it.text||'')}</div>
+      ${it.result?`<div class="small muted" style="margin-top:4px">resultado: ${esc(String(it.result).slice(0,120))}</div>`:''}
+      <div class="toolbar" style="margin-top:6px">
+        ${canCancel?`<button class="btn ghost" onclick="cancelScheduled('${esc(it.id)}')">Cancelar</button>`:''}
+        <button class="btn danger" onclick="deleteScheduled('${esc(it.id)}')">Borrar</button>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+async function cancelScheduled(id){
+  await api('/admin/scheduled/cancel', {method:'POST', body:JSON.stringify({id})});
+  loadScheduled();
+}
+async function deleteScheduled(id){
+  await api('/admin/scheduled/delete', {method:'POST', body:JSON.stringify({id})});
+  loadScheduled();
+}
+
+async function loadSessions(){
+  const r = await api('/admin/sessions');
+  const box = $('sessionsList'); if(!box) return;
+  const items = r.items || [];
+  const cur = r.current || {};
+  if ($('sesWaUrl') && !$('sesWaUrl').value) $('sesWaUrl').value = cur.dataDir ? 'http://127.0.0.1:2785' : '';
+  if ($('sesProvider') && !$('sesProvider').value) $('sesProvider').value = $('cfgProvider')?.value || 'openrouter';
+  if ($('sesModel') && !$('sesModel').value) $('sesModel').value = $('cfgModel')?.value || '';
+  if ($('sesPort') && !$('sesPort').value) $('sesPort').value = String((cur.port||2013) + items.length + 1);
+  let html = `<div class="chat-item" style="cursor:default"><div class="jid">Sesión actual: ${esc(cur.sessionName||'Principal')}</div><div class="meta"><span class="badge bot">puerto ${esc(String(cur.port||''))}</span><span>${esc(cur.sessionSlug||'')}</span></div><div class="toolbar" style="margin-top:6px"><a class="btn ghost" href="/admin" style="text-decoration:none">Abrir panel actual</a></div></div>`;
+  html += items.map(it=>`
+    <div class="chat-item" style="cursor:default">
+      <div class="jid">${esc(it.name||it.slug)}</div>
+      <div class="meta"><span class="badge ${it.running?'bot':'human'}">${it.running?'running':'stopped'}</span><span>puerto ${esc(String(it.port||''))}</span><span>${esc(it.slug||'')}</span></div>
+      <div class="sub">${esc(it.businessInfo||'')}</div>
+      <div class="toolbar" style="margin-top:6px">
+        <a class="btn ghost" href="http://127.0.0.1:${esc(String(it.port))}/admin" target="_blank" style="text-decoration:none">Abrir panel</a>
+        <button class="btn ghost" onclick="startSession('${esc(it.slug)}')">Iniciar</button>
+        <button class="btn danger" onclick="stopSession('${esc(it.slug)}')">Detener</button>
+      </div>
+    </div>`).join('');
+  box.innerHTML = html;
+}
+async function createSession(startAfter=false){
+  const payload = {
+    name: $('sesName').value.trim(), slug: $('sesSlug').value.trim(), port: Number($('sesPort').value||0),
+    waUrl: $('sesWaUrl').value.trim(), waSession: $('sesWaSession').value.trim(),
+    provider: $('sesProvider').value.trim(), model: $('sesModel').value.trim(),
+    keywords: $('sesKeywords').value, businessInfo: $('sesBiz').value.trim(), prompt: $('cfgPrompt')?.value || ''
+  };
+  const r = await api('/admin/sessions/create', {method:'POST', body:JSON.stringify(payload)});
+  $('sesStatus').textContent = r.ok ? ('Sesión creada: ' + (r.panelUrl||'')) : ('Error: ' + (r.error||''));
+  if (r.ok) { await loadSessions(); if (startAfter) await startSession(r.item.slug, true); }
+}
+async function createAndStartSession(){ return createSession(true); }
+async function startSession(slug, open){ const r = await api('/admin/sessions/start', {method:'POST', body:JSON.stringify({slug})}); $('sesStatus').textContent = r.ok ? ('Sesión iniciada: ' + (r.panelUrl||'')) : ('Error: '+(r.error||'')); await loadSessions(); if(open && r.panelUrl) window.open(r.panelUrl,'_blank'); }
+async function stopSession(slug){ await api('/admin/sessions/stop', {method:'POST', body:JSON.stringify({slug})}); loadSessions(); }
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/admin/sw.js').catch(()=>{});}
+const am=$('assistantMode'); if(am){ am.addEventListener('change',()=>{ const b=$('assistantModeBadge'); if(b) b.textContent=am.value.toUpperCase(); }); }
 loadDashboard();
 setInterval(()=>{ const active=document.querySelector('.nav button.active')?.dataset.panel; if(active==='dashboard') loadDashboard(); if(active==='chats' && currentChat) openChat(currentChat,true); }, 15000);
 </script>

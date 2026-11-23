@@ -48,3 +48,10 @@ src/payments.jsonl
 src/services/*.err
 _backup_bot_*/
 
+
+src/assistant_history.json
+src/scheduled_messages.json
+src/sessions_registry.json
+src/sessions/
+dist/
+
