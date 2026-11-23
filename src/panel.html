@@ -279,8 +279,26 @@ document.querySelectorAll('.nav button').forEach(btn=>{
   });
 });
 
+function getAdminToken(){ return localStorage.getItem('piston_admin_token') || ''; }
+function setAdminToken(t){ localStorage.setItem('piston_admin_token', String(t||'').trim()); }
+async function ensureAdminToken(){
+  let t = getAdminToken();
+  if (t) return t;
+  t = prompt('ADMIN_TOKEN requerido (deja vacío si no configuraste ADMIN_TOKEN en el servidor):') || '';
+  setAdminToken(t);
+  return t;
+}
 async function api(path, opts={}){
-  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+  const tkn = getAdminToken();
+  if (tkn) headers['X-Admin-Token'] = tkn;
+  let r = await fetch(path, { ...opts, headers });
+  if (r.status === 401) {
+    const nt = prompt('Token admin inválido o requerido. Ingresa ADMIN_TOKEN:') || '';
+    setAdminToken(nt);
+    headers['X-Admin-Token'] = nt;
+    r = await fetch(path, { ...opts, headers });
+  }
   const t = await r.text();
   try { return JSON.parse(t); } catch { return { raw:t, status:r.status }; }
 }

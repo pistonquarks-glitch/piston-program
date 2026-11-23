@@ -44,3 +44,9 @@ _Actualizado: 2026-11-23_
 - Mover repos backup a privado si corresponde.
 - Completar multimedia/correcciones pendientes de `pistonquarks.store` según checkpoint anterior.
 - Probar sesiones multi-puerto con Open-WA real (Session ID/QR).
+
+## Hardening aplicado (2026-11-23, post-v2)
+- `ADMIN_BIND` default `127.0.0.1` (antes 0.0.0.0). Configurable por env.
+- `ADMIN_TOKEN`: si se configura, protege APIs `/admin/*` con `X-Admin-Token`; panel pide token y lo guarda en localStorage.
+- Auditoría: `audit.log` en DATA_DIR para acciones sensibles (send, state, directives, sesiones, programados, ai-assist).
+- `.env.example` actualizado con `ADMIN_BIND` y `ADMIN_TOKEN`.

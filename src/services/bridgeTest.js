@@ -8,6 +8,8 @@ const paymentVerifier = require('./paymentVerifier');
 const conversationGate = require('./conversationGate');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
+const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OPENWA_URL = 'http://127.0.0.1:2785';
 // API key del cliente Open-WA (usada en send-text y para descargar medios)
@@ -799,6 +801,13 @@ function sessionRuntimeStatus(item) {
     return st;
 }
 
+function auditAdmin(action, detail = {}) {
+    try {
+        const rec = { ts: new Date().toISOString(), action, ...detail };
+        fs.appendFileSync(path.join(DATA_DIR, 'audit.log'), JSON.stringify(rec) + '\n', 'utf8');
+    } catch (e) {}
+}
+
 // Aviso interno a Rony cuando el bot no puede resolver algo (relevo real a humano).
 const ALERT_NUMBER = '51930640071@c.us';
 const ALERT_THROTTLE_MS = 30 * 60 * 1000;
@@ -887,6 +896,29 @@ const server = http.createServer(async (req, res) => {
         try { pathname = new URL(pathname).pathname; } catch (e) { /* conservar req.url crudo */ }
     } else if (pathname.includes('?')) {
         pathname = pathname.split('?')[0];
+    }
+
+    // Admin auth: si ADMIN_TOKEN está configurado, proteger APIs /admin/*
+    const isAdminPath = pathname === '/admin' || pathname.startsWith('/admin/');
+    const isAdminPublic = pathname === '/admin' || pathname === '/admin/manifest.webmanifest' || pathname === '/admin/sw.js' || pathname === '/admin/icon-192.png' || pathname === '/admin/icon-512.png' || pathname === '/admin/login';
+    if (isAdminPath && ADMIN_TOKEN) {
+        const q = new URL(req.url, 'http://localhost');
+        const provided = String(req.headers['x-admin-token'] || q.searchParams.get('token') || '').trim();
+        if (pathname === '/admin/login' && req.method === 'POST') {
+            const chunks=[]; req.on('data',c=>chunks.push(c)); req.on('end',()=>{ let p={}; try{p=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}')}catch(e){}
+                const ok = String(p.token||'').trim() === ADMIN_TOKEN;
+                res.writeHead(ok?200:401,{'Content-Type':'application/json'}); res.end(JSON.stringify({ok}));
+            }); return;
+        }
+        if (!isAdminPublic || (isAdminPublic && req.method !== 'GET' && pathname !== '/admin/login')) {
+            // allow public GET assets/panel page, protect APIs
+        }
+        const needsAuth = !isAdminPublic || (pathname !== '/admin' && !pathname.endsWith('.png') && !pathname.endsWith('.webmanifest') && !pathname.endsWith('/sw.js') && pathname !== '/admin/login');
+        if (needsAuth && provided !== ADMIN_TOKEN) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'unauthorized', hint: 'Set X-Admin-Token header or ADMIN_TOKEN' }));
+            return;
+        }
     }
 
     if (pathname === '/webhook' && req.method === 'POST') {
@@ -1217,6 +1249,7 @@ const server = http.createServer(async (req, res) => {
             const text = String(parsed.text || '').trim();
             if (!text) { res.writeHead(400); res.end(JSON.stringify({ error: 'text requerido' })); return; }
             const saved = addDirective(text);
+            auditAdmin('directive_add', { text: String(saved).slice(0,120) });
             logEvent('info', 'directive_added_panel', { text: saved });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, text: saved, directives: BOT_DIRECTIVES }));
@@ -1224,6 +1257,7 @@ const server = http.createServer(async (req, res) => {
         return;
     } else if (pathname === '/admin/directives/clear' && req.method === 'POST') {
         clearDirectives();
+        auditAdmin('directives_clear', {});
         logEvent('info', 'directives_cleared_panel', {});
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, directives: BOT_DIRECTIVES }));
@@ -1244,6 +1278,7 @@ const server = http.createServer(async (req, res) => {
                 if (ok) {
                     try { conversationGate.noteBotSend(chatId, text); } catch (e) { /* ignore */ }
                 }
+                auditAdmin('panel_send', { chatId, ok, len: text.length });
                 logEvent(ok ? 'info' : 'warn', 'panel_send', { sessionId, chat: chatId, text: text.slice(0, 500), ok, result: String(result || '').slice(0, 300) });
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok, sessionId, chatId, result: String(result || '').slice(0, 300) }));
@@ -1293,6 +1328,7 @@ const server = http.createServer(async (req, res) => {
             const reply = await callAssistantAI(system, userPrompt);
             const entry = { ts: new Date().toISOString(), role: 'exchange', jid, mode, assistantMode, objective, message, reply: reply || '', confirm };
             pushAssistHistory(entry);
+            auditAdmin('ai_assist', { mode, assistantMode, jid, ok: !!reply });
             logEvent('info', 'panel_ai_assist', { mode, assistantMode, jid, objective: objective.slice(0, 120), ok: !!reply });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: !!reply, reply: reply || 'No pude generar respuesta con el modelo actual. Verifica OPENROUTER_API_KEY/modelo.', mode, assistantMode, jid, caps }));
@@ -1325,6 +1361,7 @@ const server = http.createServer(async (req, res) => {
             const items = readScheduled();
             const item = { id: 'sch_' + Date.now() + '_' + Math.random().toString(36).slice(2,8), jid, text, sendAt, createdAt: new Date().toISOString(), status: 'pending' };
             items.push(item); writeScheduled(items);
+            auditAdmin('schedule_create', { jid, sendAt });
             logEvent('info', 'panel_schedule_created', { jid, sendAt });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, item, items }));
@@ -1339,7 +1376,7 @@ const server = http.createServer(async (req, res) => {
             const id = String(parsed.id || '').trim();
             const items = readScheduled();
             const item = items.find(x => x.id === id);
-            if (item) { item.status = 'cancelled'; item.cancelledAt = new Date().toISOString(); writeScheduled(items); }
+            if (item) { item.status = 'cancelled'; item.cancelledAt = new Date().toISOString(); writeScheduled(items); auditAdmin('schedule_cancel', { id }); }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: !!item, items }));
         });
@@ -1384,6 +1421,7 @@ const server = http.createServer(async (req, res) => {
             if (items.some(x => x.slug === slug || Number(x.port) === Number(port))) { res.writeHead(400); res.end(JSON.stringify({ error: 'slug o puerto ya existe' })); return; }
             const item = { id: 'ses_' + Date.now(), slug, name, port, waUrl, waSession, provider, model, keywords, businessInfo, dataDir: dir, createdAt: new Date().toISOString(), status: 'stopped', pid: null };
             items.push(item); writeSessionsRegistry(items);
+            auditAdmin('session_create', { slug, port, name });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, item, panelUrl: 'http://127.0.0.1:' + port + '/admin' }));
         });
@@ -1407,6 +1445,7 @@ const server = http.createServer(async (req, res) => {
                 child.unref();
                 item.pid = child.pid; item.status = 'running'; item.startedAt = new Date().toISOString();
                 writeSessionsRegistry(items);
+                auditAdmin('session_start', { slug, port: item.port, pid: item.pid });
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok: true, item, panelUrl: 'http://127.0.0.1:' + item.port + '/admin' }));
             } catch (e) {
@@ -1428,6 +1467,7 @@ const server = http.createServer(async (req, res) => {
             try { if (item.pid) process.kill(Number(item.pid)); } catch (e) {}
             item.status = 'stopped'; item.stoppedAt = new Date().toISOString();
             writeSessionsRegistry(items);
+            auditAdmin('session_stop', { slug });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, item }));
         });
@@ -1531,7 +1571,7 @@ async function tickScheduledMessages() {
     if (changed) writeScheduled(items);
 }
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, ADMIN_BIND, () => {
     console.log('ðŸš€ Puente Piston Quarks activo en puerto ' + PORT);
     console.log('ðŸŒ Esperando webhooks en http://localhost:' + PORT + '/webhook');
     console.log('ðŸšª Compuerta de conversaciÃ³n activa: takeover humano 6 h Â· dedupe 8 s Â· silencio si no lo llaman');
