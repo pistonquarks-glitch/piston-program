@@ -57,3 +57,8 @@ _Actualizado: 2026-11-23_
 - Modelo: público = distribución/docs/marketing; privado = motor/licencias/recursos premium, acceso autorizado/pago. Instalador unificado debe verificar licencia antes de habilitar core privado (pendiente implementar).
 - Campaña FB/LinkedIn redactada en `docs/marketing/CAMPANA_FB_LINKEDIN.md`.
 
+
+
+## Identidad de marca (2026-11-24)
+- Decision: Piston Quarks es marca paraguas; Piston Bot NO tiene logo propio separado. Usar logo cromado (logo cromado para perfil de fb.png) en panel/PWA, EXE (icono), assets de repos y campañas. Producto identificado con wordmark "Piston Bot".
+- Aplicado: src/icon-192.png, src/icon-512.png, dist/piston-logo.ico, panel.html brand, manifest.webmanifest, repos piston-bot y piston-bot-core, EXE y ZIP recompilados.
