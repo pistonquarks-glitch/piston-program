@@ -9,6 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="/admin/icon-192.png">
 <link rel="apple-touch-icon" href="/admin/icon-192.png">
 <style>
   :root{--bg:#0b1220;--bg2:#121b2f;--card:#17233b;--card2:#1d2c47;--line:#243754;--text:#ecf2ff;--muted:#93a7c4;--accent:#f2b632;--accent2:#ffd46f;--ok:#34d399;--warn:#f59e0b;--bad:#f87171;--blue:#60a5fa}
@@ -16,7 +17,8 @@
   .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
   .side{background:rgba(10,18,32,.92);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh}
   .brand{display:flex;gap:10px;align-items:center;padding:6px 8px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
-  .logo{width:38px;height:38px;border-radius:10px;background:var(--accent);color:#0b1220;display:grid;place-items:center;font-weight:800;font-size:22px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--accent);color:#0b1220;display:grid;place-items:center;overflow:hidden}
+  .logo img{width:100%;height:100%;object-fit:contain;border-radius:10px}
   .brand h1{font-size:16px;margin:0;line-height:1.1}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
   .nav button{width:100%;text-align:left;padding:10px 12px;margin:4px 0;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:10px;cursor:pointer;font-size:14px}
   .nav button:hover{background:rgba(255,255,255,.04);color:var(--text)}
@@ -45,9 +47,10 @@
   .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
   .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
   .status-dot.blue{background:#60a5fa}.status-dot.green{background:#34d399}.status-dot.yellow{background:#fbbf24}.status-dot.red{background:#f87171}.status-dot.gray{background:#94a3b8}
-  .msgs{height:56vh;overflow:auto;padding:8px;background:rgba(0,0,0,.12);border-radius:12px;border:1px solid var(--line)}
-  .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
-  .msg.in{background:#22344f;border:1px solid #2d4467}.msg.out{margin-left:auto;background:rgba(242,182,50,.14);border:1px solid rgba(242,182,50,.22)}
+  .msgs{height:56vh;overflow:auto;padding:8px;background:rgba(0,0,0,.12);border-radius:12px;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end}
+  .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;align-self:flex-start}
+  .msg.out{align-self:flex-end;background:rgba(242,182,50,.14);border:1px solid rgba(242,182,50,.22)}
+  .msg.in{background:#22344f;border:1px solid #2d4467}
   .msg .t{display:block;color:var(--muted);font-size:10px;margin-top:6px}
   .composer{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:12px}
   input,textarea,select{width:100%;background:#0f1a2d;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit}
@@ -69,7 +72,7 @@
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><div class="logo">P</div><div><h1>Pistón Panel</h1><p>Bot WhatsApp</p></div></div>
+    <div class="brand"><div class="logo"><img src="/admin/icon-192.png" alt="Piston Quarks"></div><div><h1>Piston Bot</h1><p>by Piston Quarks · Panel WhatsApp</p></div></div>
     <nav class="nav">
       <button data-panel="dashboard" class="active">Dashboard</button>
       <button data-panel="chats">Conversaciones</button>
@@ -338,8 +341,19 @@ function interventionInfo(c){
   if (bot) return {key:'bot_only', label:'Solo bot', color:'blue', dot:'blue', cls:'st-blue'};
   return {key:'none', label:'Sin intervención', color:'gray', dot:'gray', cls:''};
 }
+function fmtPhone(num){
+  const d = String(num || '').replace(/\D/g, '');
+  if (!d) return '';
+  const local = d.startsWith('51') && d.length > 9 ? d.slice(2) : d;
+  const grouped = local.replace(/(\d{3})(?=\d)/g, '$1 ');
+  return '+51 ' + grouped;
+}
 function contactTitle(c){
-  return (c.name || c.pushname || c.number || c.jid || 'Contacto').trim();
+  const raw = String((c && (c.name || c.pushname)) || '').trim();
+  if (raw) return raw;
+  const num = String((c && c.number) || '').replace(/\D/g, '');
+  if (num) { const f = fmtPhone(num); if (f) return f; }
+  return String((c && c.jid) || 'Contacto').trim() || 'Contacto';
 }
 function contactSub(c){
   const bits = [];

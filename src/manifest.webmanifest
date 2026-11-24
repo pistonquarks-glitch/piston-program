@@ -1,6 +1,6 @@
 ﻿{
-  "name": "Piston Panel",
-  "short_name": "Piston Panel",
+  "name": "Piston Bot - Piston Quarks",
+  "short_name": "Piston Bot",
   "start_url": "/admin",
   "display": "standalone",
   "background_color": "#0b1220",

@@ -56,3 +56,4 @@ _Actualizado: 2026-11-23_
 - Repo privado creado: https://github.com/pistonquarks-glitch/piston-bot-core (scaffold README, .gitignore, estado pendiente de licenciamiento/activación).
 - Modelo: público = distribución/docs/marketing; privado = motor/licencias/recursos premium, acceso autorizado/pago. Instalador unificado debe verificar licencia antes de habilitar core privado (pendiente implementar).
 - Campaña FB/LinkedIn redactada en `docs/marketing/CAMPANA_FB_LINKEDIN.md`.
+
