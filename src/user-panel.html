@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Cuenta — Piston Quarks</title>
+<link rel="icon" href="/admin/icon-192.png">
+<style>
+:root{--bg:#0b1220;--card:#17233b;--line:#243754;--text:#ecf2ff;--muted:#93a7c4;--accent:#f2b632;--ok:#34d399;--bad:#f87171}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#08101d,#0b1220 40%);color:var(--text);min-height:100vh}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 60px}
+.brand{display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.brand img{width:52px;height:52px;border-radius:12px;object-fit:contain;background:#fff2}
+.brand h1{font-size:20px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:16px;padding:16px}
+.k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.v{font-size:26px;font-weight:700;margin-top:6px}.s{color:var(--muted);font-size:12px;margin-top:4px}
+.bar{height:10px;border-radius:99px;background:#0f1a2d;border:1px solid var(--line);overflow:hidden;margin-top:10px}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ffd46f)}
+h2{font-size:17px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;border:1px solid var(--line)}.pill.ok{color:#b7f3d8;border-color:#34d39955;background:#34d39918}.pill.pend{color:#fcd34d;border-color:#f59e0b55;background:#f59e0b18}.pill.bad{color:#fecaca;border-color:#f8717155;background:#f8717118}
+.btn{display:inline-block;background:var(--accent);color:#0b1220;border:none;padding:11px 15px;border-radius:10px;font-weight:700;text-decoration:none;cursor:pointer}
+.promo{background:linear-gradient(135deg,#17233b,#1d2c47);border-color:rgba(242,182,50,.35)}
+.muted{color:var(--muted)}.small{font-size:12px}
+form{display:grid;grid-template-columns:1fr auto;gap:10px;max-width:520px}input{width:100%;background:#0f1a2d;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:inherit}
+@media(max-width:760px){.grid{grid-template-columns:1fr}form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="/admin/icon-192.png" alt="Piston Quarks">
+    <div><h1>Mi Cuenta · Piston Quarks</h1><p>Tus aplicaciones, planes, consumo y chats en un solo lugar.</p></div>
+  </div>
+
+  <div id="login" class="card">
+    <h2>Ingresa a tu cuenta</h2>
+    <p class="small muted">Usa el correo con el que te registraste y el código que te enviamos al confirmar tu pedido.</p>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="tu@correo.com" required>
+      <input id="code" placeholder="Código de acceso" maxlength="8" required>
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+    <p class="small" id="loginError" style="color:var(--bad)"></p>
+  </div>
+
+  <div id="account" style="display:none">
+    <div class="grid">
+      <div class="card"><div class="k">Plan activo</div><div class="v" id="planName" style="font-size:18px">—</div><div class="s" id="planStatus">—</div></div>
+      <div class="card"><div class="k">Tokens usados</div><div class="v" id="tokens">—</div><div class="s" id="tokensLimit">—</div><div class="bar"><i id="tokenBar" style="width:0%"></i></div></div>
+      <div class="card"><div class="k">Mensajes bot</div><div class="v" id="messages">—</div><div class="s" id="msgLimit">—</div><div class="bar"><i id="msgBar" style="width:0%"></i></div></div>
+    </div>
+
+    <div class="card promo" style="margin-bottom:18px">
+      <h2>Promociones para ti</h2>
+      <p class="small muted" id="promoText">Cada número adicional tiene 20% de descuento… (carga tu cuenta para ver tus beneficios).</p>
+      <a class="btn" href="/admin" target="_blank" rel="noopener">Abrir panel Piston Bot</a>
+    </div>
+
+    <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div class="card">
+        <h2>Mis pedidos y pagos</h2>
+        <table><thead><tr><th>Pedido</th><th>Plan</th><th>Total</th><th>Estado</th></tr></thead><tbody id="ordersBody"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Chat con el bot de la página</h2>
+        <p class="small muted">Resuelve dudas sobre planes, pagos y activación desde el chat automático de Piston Quarks.</p>
+        <a class="btn" href="https://wa.me/51930640071?text=Hola%2C%20necesito%20ayuda%20con%20mi%20cuenta%20de%20Piston%20Bot" target="_blank" rel="noopener">Abrir chat de ayuda</a>
+        <p class="small muted" style="margin-top:14px">Conversaciones: <strong id="conversations">—</strong> · Período: <strong id="period">—</strong></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+if (qs.get('email')) $('email').value = qs.get('email');
+if (qs.get('code')) $('code').value = qs.get('code');
+
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('email').value.trim(), code = $('code').value.trim();
+  const r = await fetch('/public/account?email=' + encodeURIComponent(email) + '&code=' + encodeURIComponent(code));
+  const d = await r.json().catch(() => ({}));
+  if (!d.ok) { $('loginError').textContent = d.error === 'credenciales_invalidas' ? 'Correo o código incorrectos.' : 'No se pudo conectar.'; return; }
+  history.replaceState(null, '', '?email=' + encodeURIComponent(email) + '&code=' + encodeURIComponent(code));
+  render(d);
+});
+
+function pill(status){
+  const map = {aprobado:['ok','Activo'], en_revision:['pend','En revisión'], pendiente_verificacion:['pend','Pendiente'], rechazado:['bad','Rechazado']};
+  const v = map[status] || ['', status];
+  return '<span class="pill '+v[0]+'">'+v[1]+'</span>';
+}
+
+function render(d){
+  $('login').style.display = 'none';
+  $('account').style.display = 'block';
+  const u = d.user;
+  const plan = (d.plans||[]).find(p => p.id === u.planId);
+  $('planName').textContent = plan ? plan.label : 'Sin plan asignado';
+  $('planStatus').textContent = u.planStatus + (u.planExpiresAt ? ' · hasta ' + new Date(u.planExpiresAt).toLocaleDateString('es-PE') : '');
+  const lim = plan ? plan.tokensPerMonth : 0;
+  $('tokens').textContent = Number(d.usage.tokens||0).toLocaleString('es-PE');
+  $('tokensLimit').textContent = 'de ' + lim.toLocaleString('es-PE') + ' tokens/mes';
+  $('tokenBar').style.width = Math.min(100, lim ? (d.usage.tokens/lim)*100 : 0) + '%';
+  $('messages').textContent = Number(d.usage.messages||0).toLocaleString('es-PE');
+  $('msgLimit').textContent = 'de ' + (plan ? plan.messagesPerMonth.toLocaleString('es-PE') : '0') + ' mensajes/mes';
+  $('msgBar').style.width = Math.min(100, plan ? (d.usage.messages/plan.messagesPerMonth)*100 : 0) + '%';
+  $('conversations').textContent = d.usage.conversations;
+  $('period').textContent = d.usage.period || '—';
+  $('ordersBody').innerHTML = (d.orders||[]).map(o =>
+    '<tr><td class="small">'+o.id+'</td><td>'+o.planId+'</td><td>'+o.totalLabel+'</td><td>'+pill(o.status)+'</td></tr>'
+  ).join('') || '<tr><td colspan="4" class="muted">Aún no hay pedidos.</td></tr>';
+  $('promoText').textContent = 'Cada número adicional tiene 10% de descuento fijo. '
+    + (plan ? 'Tu plan: ' + plan.label + '. ' : '')
+    + 'Escríbenos si quieres ampliar tu servicio.';
+}
+
+if ($('email').value && $('code').value) $('loginForm').requestSubmit();
+</script>
+</body>
+</html>

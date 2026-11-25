@@ -78,6 +78,7 @@
       <button data-panel="chats">Conversaciones</button>
       <button data-panel="directives">Directivas</button>
       <button data-panel="payments">Pagos</button>
+      <button data-panel="sales">Ventas / Planes</button>
       <button data-panel="config">Configuración</button>
     </nav>
     <div style="margin-top:18px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--muted)">
@@ -241,6 +242,24 @@
       </div>
     </section>
 
+    <section id="panel-sales" class="panel">
+      <div class="grid" id="salesStats">
+        <div class="card stat"><div class="k">Usuarios</div><div class="v" id="slUsers">—</div></div>
+        <div class="card stat"><div class="k">Pedidos</div><div class="v" id="slOrders">—</div></div>
+        <div class="card stat"><div class="k">Pendientes</div><div class="v" id="slPending">—</div></div>
+        <div class="card stat"><div class="k">Ingresos</div><div class="v" id="slRevenue" style="font-size:20px">—</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="toolbar"><strong>Pedidos / comprobantes</strong><button class="btn ghost" onclick="loadSales()">Actualizar</button></div>
+        <div id="salesOrders"><div class="empty">Cargando...</div></div>
+      </div>
+      <div class="card">
+        <div class="toolbar"><strong>Usuarios y planes</strong><button class="btn ghost" onclick="loadSales()">Actualizar</button></div>
+        <div id="salesUsers"><div class="empty">Cargando...</div></div>
+      </div>
+      <div id="salesDetail" class="card" style="margin-top:16px;display:none"></div>
+    </section>
+
     <section id="panel-config" class="panel">
       <div class="card">
         <div class="toolbar"><strong>Configuración del bot</strong><button class="btn" onclick="saveConfig()">Guardar cambios</button><button class="btn ghost" onclick="loadConfig()">Recargar</button></div>
@@ -272,12 +291,13 @@ document.querySelectorAll('.nav button').forEach(btn=>{
     const p = btn.dataset.panel;
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
     $('panel-'+p).classList.add('active');
-    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
+    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
     $('title').textContent=titles[p][0]; $('subtitle').textContent=titles[p][1];
     if(p==='dashboard'){loadDashboard();}
     if(p==='chats'){loadChats();}
     if(p==='directives'){loadDirectives();}
     if(p==='payments'){loadPayments();}
+    if(p==='sales'){loadSales();}
     if(p==='config'){loadConfig();}
   });
 });
@@ -626,6 +646,116 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/admin/sw.js'
 const am=$('assistantMode'); if(am){ am.addEventListener('change',()=>{ const b=$('assistantModeBadge'); if(b) b.textContent=am.value.toUpperCase(); }); }
 loadDashboard();
 setInterval(()=>{ const active=document.querySelector('.nav button.active')?.dataset.panel; if(active==='dashboard') loadDashboard(); if(active==='chats' && currentChat) openChat(currentChat,true); }, 15000);
+
+/* ===== Ventas / Planes ===== */
+let salesPlans = [];
+function salesPill(st){
+  const map={aprobado:['ok','Aprobado'],en_revision:['pend','En revisión'],pendiente_verificacion:['pend','Pendiente'],rechazado:['bad','Rechazado']};
+  const v=map[st]||['',st||'—'];
+  return '<span class="badge '+v[0]+'">'+v[1]+'</span>';
+}
+async function loadSales(){
+  try{
+    const [ov,od,us,pl]=await Promise.all([
+      api('/admin/sales/overview'),api('/admin/sales/orders'),api('/admin/sales/users'),api('/public/plans')
+    ]);
+    salesPlans=pl.plans||[];
+    $('slUsers').textContent=ov.users??'—';
+    $('slOrders').textContent=ov.orders??'—';
+    $('slPending').textContent=ov.pending??'—';
+    $('slRevenue').textContent=ov.revenueLabel||'—';
+
+    const orders=od.orders||[];
+    $('salesOrders').innerHTML = orders.length ? '<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Plan</th><th>Total</th><th>Estado</th><th>Evidencia</th><th>Acciones</th></tr></thead><tbody>'+orders.map(o=>{
+      const ev = o.proof ? '<a href="/admin/sales/proof/'+encodeURIComponent(o.id)+'" target="_blank" rel="noopener">Ver captura</a>' : '—';
+      return '<tr>'
+        +'<td class="small">'+esc(o.id)+'</td>'
+        +'<td>'+esc(o.name||'')+'<div class="small muted">'+esc(o.email||'')+'</div></td>'
+        +'<td>'+esc(o.planId||'')+'</td>'
+        +'<td>'+esc((o.quote&&o.quote.totalLabel)||'')+'</td>'
+        +'<td>'+salesPill(o.status)+'</td>'
+        +'<td>'+ev+'</td>'
+        +'<td><button class="btn ghost" onclick="openSalesOrder(\''+esc(o.id)+'\')">Ver / aprobar</button> <button class="btn ghost" onclick="rerunOcr(\''+esc(o.id)+'\')">OCR</button></td>'
+        +'</tr>';
+    }).join('')+'</tbody></table>' : '<div class="empty">No hay pedidos todavía.</div>';
+
+    const users=us.users||[];
+    $('salesUsers').innerHTML = users.length ? '<table><thead><tr><th>Cliente</th><th>Plan</th><th>Estado</th><th>Números</th><th>tokens / mensajes</th><th>Mover a plan</th></tr></thead><tbody>'+users.map(u=>{
+      const opts='<option value="">— sin plan —</option>'+salesPlans.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===u.planId?'selected':'')+'>'+esc(p.label)+' · '+p.priceLabel+'</option>').join('');
+      return '<tr>'
+        +'<td>'+esc(u.name||'')+'<div class="small muted">'+esc(u.email||'')+' · código '+esc(u.accessCode||'')+'</div></td>'
+        +'<td>'+esc(u.planId||'—')+'</td>'
+        +'<td>'+esc(u.planStatus||'—')+(u.planExpiresAt?'<div class="small muted">hasta '+new Date(u.planExpiresAt).toLocaleDateString('es-PE')+'</div>':'')+'</td>'
+        +'<td>'+esc(u.numbers||0)+'</td>'
+        +'<td class="small">'+Number(u.usage&&u.usage.tokens||0).toLocaleString('es-PE')+' / '+Number(u.usage&&u.usage.messages||0).toLocaleString('es-PE')+'</td>'
+        +'<td><select id="pl_'+esc(u.id)+'" style="min-width:170px">'+opts+'</select><button class="btn ghost" onclick="changePlan(\''+esc(u.id)+'\')">Aplicar</button></td>'
+        +'</tr>';
+    }).join('')+'</tbody></table>' : '<div class="empty">No hay usuarios registrados.</div>';
+  }catch(e){
+    $('salesOrders').innerHTML='<div class="empty">Error cargando ventas.</div>';
+  }
+}
+async function openSalesOrder(id){
+  const d=await api('/admin/sales/orders/'+encodeURIComponent(id));
+  if(!d.ok) return;
+  const o=d.order;
+  const ocr=o.ocr||{};
+  const p=ocr.parsed||{};
+  const sug=o.suggestion||{};
+  const opts='<option value="'+esc(o.planId)+'">Plan del pedido: '+esc(o.planId)+'</option>'+salesPlans.filter(x=>x.id!==o.planId).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.label)+' · '+x.priceLabel+'</option>').join('');
+  $('salesDetail').style.display='block';
+  $('salesDetail').innerHTML='<h2>Detalle '+esc(o.id)+'</h2>'
+    +'<div class="two"><div>'
+    +'<p><strong>Cliente:</strong> '+esc(o.name||'')+' · '+esc(o.email||'')+' · '+esc(o.phone||'')+'</p>'
+    +'<p><strong>Estado:</strong> '+salesPill(o.status)+' · <strong>Total pedido:</strong> '+esc((o.quote&&o.quote.totalLabel)||'')+'</p>'
+    +'<p><strong>Evidencia:</strong> '+(o.proof?'<a href="/admin/sales/proof/'+encodeURIComponent(o.id)+'" target="_blank" rel="noopener">Abrir captura</a> ('+esc(o.proof.driveStatus||'')+')':'sin captura')+'</p>'
+    +'<div class="field"><label>Plan a asignar</label><select id="reviewPlan">'+opts+'</select></div>'
+    +'<div class="field"><label>Números</label><input id="reviewNumbers" type="number" value="1" min="1"></div>'
+    +'<div class="field"><label>Notas</label><textarea id="reviewNotes" style="min-height:70px" placeholder="Observaciones de la revisión"></textarea></div>'
+    +'<div class="toolbar"><button class="btn" onclick="reviewOrder(\''+esc(o.id)+'\',\'approve\')">Aprobar y activar plan</button> <button class="btn danger" onclick="reviewOrder(\''+esc(o.id)+'\',\'reject\')">Rechazar</button></div>'
+    +'</div><div><strong>OCR / comprobante</strong><pre style="margin-top:8px">'+esc(JSON.stringify({
+      app:p.app||p.method||null,
+      amount:p.amount,
+      currency:p.currency,
+      reference:p.reference,
+      sender:p.sender,
+      receiver:p.receiver,
+      date:p.date,time:p.time,
+      consistency:ocr.consistency,
+      suggestion:sug,
+      error:ocr.error||null
+    },null,2))+'</pre></div></div>';
+  $('salesDetail').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function rerunOcr(id){
+  await api('/admin/sales/orders/'+encodeURIComponent(id)+'/ocr',{method:'POST'});
+  await openSalesOrder(id);
+}
+async function reviewOrder(id,action){
+  const body={action};
+  if(action==='approve'){
+    body.planId=$('reviewPlan').value;
+    body.numbers=parseInt($('reviewNumbers').value,10)||1;
+    body.notes=$('reviewNotes').value;
+  } else {
+    body.notes=$('reviewNotes')?$('reviewNotes').value:'';
+  }
+  const r=await api('/admin/sales/orders/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify(body)});
+  alert(r.ok?('Pedido '+action+' correctamente.'):('Error: '+(r.error||'')));
+  await loadSales();
+  $('salesDetail').style.display='none';
+}
+async function changePlan(userId){
+  const sel=$('pl_'+userId);
+  if(!sel) return;
+  const r=await api('/admin/sales/users/'+encodeURIComponent(userId)+'/plan',{method:'POST',body:JSON.stringify({
+    planId:sel.value||null,
+    planStatus:sel.value?'active':'none'
+  })});
+  alert(r.ok?'Plan actualizado.':('Error: '+(r.error||'')));
+  loadSales();
+}
+
 </script>
 </body>
 </html>

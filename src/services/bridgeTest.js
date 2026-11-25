@@ -6,6 +6,9 @@ const os = require('os');
 const { spawn } = require('child_process');
 const paymentVerifier = require('./paymentVerifier');
 const conversationGate = require('./conversationGate');
+const pricing = require('./pricing');
+const { SalesStore, normEmail } = require('./salesStore');
+const { ProofStore } = require('./proofStore');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
 const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
@@ -18,6 +21,9 @@ const DATA_DIR = process.env.SESSION_DATA_DIR ? path.resolve(process.env.SESSION
 const SESSION_NAME = process.env.SESSION_NAME || 'Principal';
 const SESSION_SLUG = process.env.SESSION_SLUG || 'principal';
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+const salesStore = new SalesStore(DATA_DIR);
+const proofStore = new ProofStore(DATA_DIR);
+const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
 const MEDIA_TMP_DIR = path.join(DATA_DIR, 'payments');
 const DEFAULT_MODEL = 'qwen2.5-coder:3b'; // Modelo local (Ollama) o remoto (OpenRouter) segun BOT_PROVIDER
@@ -51,6 +57,40 @@ let PAYMENT_OPERATORS = [...DEFAULT_PAYMENT_OPERATORS];
 let BOT_ACTIONS = [];
 let BOT_DIRECTIVES = [];
 let LAST_SESSION_ID = process.env.OPENWA_SESSION || 'b1ff3640-6e6e-44bb-a601-42d5c605ceea';
+
+function readBody(req, limitBytes) {
+    const max = limitBytes || 16 * 1024 * 1024;
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        let size = 0;
+        req.on('data', c => {
+            size += c.length;
+            if (size > max) { reject(new Error('body_too_large')); return; }
+            chunks.push(c);
+        });
+        req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+        req.on('error', reject);
+    });
+}
+
+function sendJson(res, code, obj) {
+    res.writeHead(code, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
+    });
+    res.end(JSON.stringify(obj));
+}
+
+function planExpiry(planId) {
+    const p = pricing.PLANS[String(planId || '')];
+    const months = p ? p.durationMonths : 1;
+    const d = new Date();
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString();
+}
 
 function logEvent(level, msg, data) {
     try {
@@ -621,6 +661,7 @@ async function callAI(prompt, historyKey, contextNote) {
         });
     };
 
+    let usageInfo = { prompt_tokens: 0, completion_tokens: 0 };
     const attempt = () => new Promise((resolve) => {
         const reqMod = target.startsWith('https://') ? https : http;
         const req = reqMod.request(target, {
@@ -632,6 +673,12 @@ async function callAI(prompt, historyKey, contextNote) {
             res.on('end', () => {
                 try {
                     const parsed = JSON.parse(responseBody);
+                    if (parsed && parsed.usage && isOpenRouter) {
+                        usageInfo = {
+                            prompt_tokens: parseInt(parsed.usage.prompt_tokens, 10) || 0,
+                            completion_tokens: parseInt(parsed.usage.completion_tokens, 10) || 0
+                        };
+                    }
                     if (parsed && parsed.error) {
                         logEvent('error', 'ai_api_error', { chat: hKey, provider: BOT_PROVIDER, model: BOT_MODEL, status: res.statusCode, error: JSON.stringify(parsed.error).slice(0, 500) });
                     }
@@ -674,6 +721,14 @@ async function callAI(prompt, historyKey, contextNote) {
         if (retry.text) result = retry;
     }
 
+    // Contador silencioso de consumo (tokens/mensajes/conversaciones) por tenant.
+    try {
+        const totalTokens = (usageInfo.prompt_tokens || 0) + (usageInfo.completion_tokens || 0);
+        if (totalTokens > 0 || result.text) {
+            salesStore.recordUsage(USAGE_TENANT, { tokens: totalTokens, messages: result.text ? 1 : 0, jid: hKey });
+        }
+    } catch (e) { /* el contador nunca debe romper el bot */ }
+
     if (result.text) {
         rememberTurn(hKey, prompt, result.text);
     } else {
@@ -715,6 +770,14 @@ async function callAssistantAI(systemPrompt, userPrompt) {
             res.on('end', () => {
                 try {
                     const parsed = JSON.parse(responseBody);
+                    try {
+                        if (parsed && parsed.usage && isOpenRouter) {
+                            salesStore.recordUsage('panel_assistant', {
+                                tokens: (parseInt(parsed.usage.prompt_tokens, 10) || 0) + (parseInt(parsed.usage.completion_tokens, 10) || 0),
+                                messages: 1
+                            });
+                        }
+                    } catch (e) {}
                     let aiText = '';
                     if (isOpenRouter) {
                         const msg = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message;
@@ -896,6 +959,16 @@ const server = http.createServer(async (req, res) => {
         try { pathname = new URL(pathname).pathname; } catch (e) { /* conservar req.url crudo */ }
     } else if (pathname.includes('?')) {
         pathname = pathname.split('?')[0];
+    }
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
+        });
+        res.end();
+        return;
     }
 
     // Admin auth: si ADMIN_TOKEN está configurado, proteger APIs /admin/*
@@ -1539,6 +1612,227 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, state: getBotState() }));
         });
+        return;
+    } else if (pathname === '/public/plans' && req.method === 'GET') {
+        sendJson(res, 200, {
+            ok: true,
+            plans: pricing.catalog(),
+            driveFolderId: proofStore.driveFolderId,
+            paymentInstructions: process.env.PAYMENT_INSTRUCTIONS || 'Paga por Yape/Plin al +51 930 640 071 y sube tu captura. El sistema verificará tu pago.'
+        });
+        return;
+    } else if (pathname === '/public/quote' && req.method === 'POST') {
+        try {
+            const b = JSON.parse(await readBody(req));
+            const q = pricing.quote(b.planId, b.extraNumbers);
+            if (!q) { sendJson(res, 400, { ok: false, error: 'plan_invalido' }); return; }
+            sendJson(res, 200, { ok: true, quote: q });
+        } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }
+        return;
+    } else if (pathname === '/public/orders' && req.method === 'POST') {
+        try {
+            const b = JSON.parse(await readBody(req));
+            const name = String(b.name || '').trim();
+            const email = String(b.email || '').trim();
+            const phone = String(b.phone || '').replace(/\D/g, '');
+            if (!name || !email.includes('@') || phone.length < 9) {
+                sendJson(res, 400, { ok: false, error: 'datos_incompletos', detail: 'Nombre, correo válido y celular son obligatorios.' });
+                return;
+            }
+            const q = pricing.quote(b.planId, b.extraNumbers);
+            if (!q) { sendJson(res, 400, { ok: false, error: 'plan_invalido' }); return; }
+            const user = salesStore.upsertUser({ name, email, phone, business: b.business, source: b.source || 'web' });
+            const order = salesStore.createOrder({ userId: user.id, name, email, phone, source: b.source || 'web', quote: q });
+            auditAdmin('order_create', { orderId: order.id, planId: q.planId, total: q.total });
+            logEvent('info', 'sales_order_created', { orderId: order.id, email, planId: q.planId, total: q.total });
+            sendJson(res, 201, {
+                ok: true,
+                orderId: order.id,
+                accessCode: user.accessCode,
+                quote: q,
+                paymentInstructions: process.env.PAYMENT_INSTRUCTIONS || 'Paga por Yape/Plin al +51 930 640 071 y sube tu captura.'
+            });
+        } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }
+        return;
+    } else if (/^\/public\/orders\/[^/]+\/proof$/.test(pathname) && req.method === 'POST') {
+        const id = decodeURIComponent(pathname.split('/')[3]);
+        const order = salesStore.getOrder(id);
+        if (!order) { sendJson(res, 404, { ok: false, error: 'pedido_no_encontrado' }); return; }
+        try {
+            const b = JSON.parse(await readBody(req));
+            const proof = await proofStore.save({ orderId: id, fileName: b.fileName, mime: b.mime, dataBase64: b.dataBase64 });
+            salesStore.updateOrder(id, { proof, status: 'en_revision' });
+            const ocr = await proofStore.analyze(proof, order.planId);
+            salesStore.updateOrder(id, { ocr, suggestion: ocr.suggestion });
+            // Auto-activación solo si está habilitada y el OCR coincide exactamente.
+            let autoAssigned = null;
+            if (String(process.env.AUTO_APPROVE_PAYMENTS || 'false').toLowerCase() === 'true'
+                && ocr.consistency && ocr.consistency.ok
+                && ocr.suggestion && ocr.suggestion.exact) {
+                const planId = ocr.suggestion.planId;
+                autoAssigned = salesStore.assignPlan(order.userId, {
+                    planId,
+                    planStatus: 'active',
+                    numbers: 1,
+                    planStartedAt: new Date().toISOString(),
+                    planExpiresAt: planExpiry(planId),
+                    assignedBy: 'system_ocr',
+                    notes: 'Auto-activado por OCR (monto exacto).'
+                });
+                salesStore.updateOrder(id, { status: 'aprobado', reviewedBy: 'system_ocr', reviewedAt: new Date().toISOString(), reviewNotes: 'Auto-aprobado por OCR.' });
+                auditAdmin('order_auto_approve', { orderId: id, planId });
+            }
+            logEvent('info', 'sales_proof_uploaded', { orderId: id, driveStatus: proof.driveStatus, ocrError: ocr.error || null });
+            sendJson(res, 200, { ok: true, status: autoAssigned ? 'aprobado' : 'en_revision', proof: { driveStatus: proof.driveStatus, driveLink: proof.driveLink, sha256: proof.sha256 }, ocr, autoAssigned: !!autoAssigned });
+        } catch (e) {
+            sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) });
+        }
+        return;
+    } else if (/^\/public\/orders\/[^/]+\/status$/.test(pathname) && req.method === 'GET') {
+        const id = decodeURIComponent(pathname.split('/')[3]);
+        const u = new URL(req.url, 'http://localhost');
+        const order = salesStore.getOrder(id);
+        if (!order) { sendJson(res, 404, { ok: false, error: 'pedido_no_encontrado' }); return; }
+        if (normEmail(u.searchParams.get('email')) !== normEmail(order.email)) {
+            sendJson(res, 403, { ok: false, error: 'no_autorizado' }); return;
+        }
+        sendJson(res, 200, {
+            ok: true,
+            orderId: order.id,
+            status: order.status,
+            planId: order.planId,
+            totalLabel: order.quote && order.quote.totalLabel,
+            createdAt: order.createdAt,
+            reviewedAt: order.reviewedAt,
+            hasProof: !!order.proof,
+            message: order.status === 'aprobado' ? 'Tu plan está activo. Revisa Mi Cuenta.'
+                : order.status === 'rechazado' ? 'Revisa el comprobante y vuelve a subirlo.' : 'Tu comprobante está en verificación.'
+        });
+        return;
+    } else if (pathname === '/public/account' && req.method === 'GET') {
+        const u = new URL(req.url, 'http://localhost');
+        const user = salesStore.findUserByEmail(u.searchParams.get('email'));
+        if (!user || String(u.searchParams.get('code') || '').toUpperCase() !== user.accessCode) {
+            sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return;
+        }
+        const orders = salesStore.findOrdersByEmail(user.email).map(o => ({
+            id: o.id, status: o.status, planId: o.planId, totalLabel: o.quote && o.quote.totalLabel,
+            createdAt: o.createdAt, reviewedAt: o.reviewedAt, reviewNotes: o.reviewNotes
+        }));
+        const usage = salesStore.getUsage(user.id);
+        sendJson(res, 200, {
+            ok: true,
+            user: { name: user.name, email: user.email, phone: user.phone, business: user.business, planId: user.planId, planStatus: user.planStatus, numbers: user.numbers, planExpiresAt: user.planExpiresAt },
+            orders,
+            usage: { tokens: usage.tokens, messages: usage.messages, conversations: usage.conversations, period: usage.period },
+            plans: pricing.catalog()
+        });
+        return;
+    } else if (pathname === '/mi-cuenta' && req.method === 'GET') {
+        try {
+            const p = path.join(__dirname, '..', 'user-panel.html');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+            res.end(fs.readFileSync(p, 'utf8'));
+        } catch (e) { res.writeHead(404); res.end('No disponible'); }
+        return;
+    } else if (pathname === '/admin/sales/overview' && req.method === 'GET') {
+        const users = salesStore.listUsers();
+        const orders = salesStore.listOrders();
+        const revenue = orders.filter(o => o.status === 'aprobado').reduce((s, o) => s + (o.quote && o.quote.total || 0), 0);
+        sendJson(res, 200, {
+            ok: true,
+            users: users.length,
+            orders: orders.length,
+            pending: orders.filter(o => o.status === 'pendiente_verificacion' || o.status === 'en_revision').length,
+            approved: orders.filter(o => o.status === 'aprobado').length,
+            rejected: orders.filter(o => o.status === 'rechazado').length,
+            revenue,
+            revenueLabel: pricing.money(revenue),
+            usage: salesStore.listUsage()
+        });
+        return;
+    } else if (pathname === '/admin/sales/users' && req.method === 'GET') {
+        const usage = {};
+        salesStore.listUsage().forEach(u => { usage[u.tenantId] = u; });
+        const rows = salesStore.listUsers().map(u => ({
+            ...u,
+            usage: usage[u.id] || { tokens: 0, messages: 0, conversations: 0, period: null }
+        }));
+        sendJson(res, 200, { ok: true, users: rows });
+        return;
+    } else if (pathname === '/admin/sales/orders' && req.method === 'GET') {
+        sendJson(res, 200, { ok: true, orders: salesStore.listOrders() });
+        return;
+    } else if (/^\/admin\/sales\/orders\/[^/]+$/.test(pathname) && req.method === 'GET') {
+        const id = decodeURIComponent(pathname.split('/')[4]);
+        const o = salesStore.getOrder(id);
+        if (!o) { sendJson(res, 404, { ok: false, error: 'pedido_no_encontrado' }); return; }
+        sendJson(res, 200, { ok: true, order: o });
+        return;
+    } else if (/^\/admin\/sales\/orders\/[^/]+\/ocr$/.test(pathname) && req.method === 'POST') {
+        const id = decodeURIComponent(pathname.split('/')[4]);
+        const o = salesStore.getOrder(id);
+        if (!o || !o.proof) { sendJson(res, 404, { ok: false, error: 'sin_comprobante' }); return; }
+        const ocr = await proofStore.analyze(o.proof, o.planId);
+        salesStore.updateOrder(id, { ocr, suggestion: ocr.suggestion });
+        auditAdmin('order_ocr_rerun', { orderId: id });
+        sendJson(res, 200, { ok: true, ocr });
+        return;
+    } else if (/^\/admin\/sales\/orders\/[^/]+\/review$/.test(pathname) && req.method === 'POST') {
+        const id = decodeURIComponent(pathname.split('/')[4]);
+        const o = salesStore.getOrder(id);
+        if (!o) { sendJson(res, 404, { ok: false, error: 'pedido_no_encontrado' }); return; }
+        try {
+            const b = JSON.parse(await readBody(req));
+            const action = String(b.action || '').toLowerCase();
+            if (action !== 'approve' && action !== 'reject') { sendJson(res, 400, { ok: false, error: 'accion_invalida' }); return; }
+            let assigned = null;
+            if (action === 'approve') {
+                const planId = b.planId || (o.suggestion && o.suggestion.planId) || o.planId;
+                assigned = salesStore.assignPlan(o.userId, {
+                    planId,
+                    planStatus: 'active',
+                    numbers: Math.max(1, parseInt(b.numbers, 10) || 1),
+                    planStartedAt: new Date().toISOString(),
+                    planExpiresAt: b.planExpiresAt || planExpiry(planId),
+                    assignedBy: 'admin',
+                    notes: b.notes || ('Aprobado desde captura. Plan original: ' + o.planId)
+                });
+            }
+            salesStore.updateOrder(id, {
+                status: action === 'approve' ? 'aprobado' : 'rechazado',
+                reviewedBy: 'admin',
+                reviewedAt: new Date().toISOString(),
+                reviewNotes: String(b.notes || '').slice(0, 1000)
+            });
+            auditAdmin('order_review', { orderId: id, action, planId: assigned && assigned.planId });
+            logEvent('info', 'sales_order_reviewed', { orderId: id, action });
+            sendJson(res, 200, { ok: true, order: salesStore.getOrder(id), assigned });
+        } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }
+        return;
+    } else if (/^\/admin\/sales\/users\/[^/]+\/plan$/.test(pathname) && req.method === 'POST') {
+        const id = decodeURIComponent(pathname.split('/')[4]);
+        try {
+            const b = JSON.parse(await readBody(req));
+            const patch = { assignedBy: 'admin_panel' };
+            ['planId', 'planStatus', 'numbers', 'planStartedAt', 'planExpiresAt', 'notes'].forEach(k => { if (b[k] !== undefined) patch[k] = b[k]; });
+            const u = salesStore.assignPlan(id, patch);
+            if (!u) { sendJson(res, 404, { ok: false, error: 'usuario_no_encontrado' }); return; }
+            auditAdmin('user_plan_change', { userId: id, planId: patch.planId, status: patch.planStatus });
+            sendJson(res, 200, { ok: true, user: u });
+        } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }
+        return;
+    } else if (/^\/admin\/sales\/proof\/[^/]+$/.test(pathname) && req.method === 'GET') {
+        const id = decodeURIComponent(pathname.split('/')[4]);
+        const o = salesStore.getOrder(id);
+        const p = o && o.proof && proofStore.getPath(o.proof);
+        if (!p) { res.writeHead(404); res.end(); return; }
+        const mime = (o.proof && o.proof.mime) || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+        fs.createReadStream(p).pipe(res);
+        return;
+    } else if (pathname === '/admin/sales/usage' && req.method === 'GET') {
+        sendJson(res, 200, { ok: true, usage: salesStore.listUsage() });
         return;
     } else {
         res.writeHead(404);

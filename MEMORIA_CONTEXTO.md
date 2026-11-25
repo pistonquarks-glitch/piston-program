@@ -62,3 +62,13 @@ _Actualizado: 2026-11-23_
 ## Identidad de marca (2026-11-24)
 - Decision: Piston Quarks es marca paraguas; Piston Bot NO tiene logo propio separado. Usar logo cromado (logo cromado para perfil de fb.png) en panel/PWA, EXE (icono), assets de repos y campañas. Producto identificado con wordmark "Piston Bot".
 - Aplicado: src/icon-192.png, src/icon-512.png, dist/piston-logo.ico, panel.html brand, manifest.webmanifest, repos piston-bot y piston-bot-core, EXE y ZIP recompilados.
+
+
+## Venta online + paneles + OCR (2026-11-25)
+- Planes: Suscripción S/100/mes (1M tokens, 1000 msgs, 1 número); APP 6 meses S/500 web / S/700 físico (5M tokens/mes, 5000 msgs/mes). Números extra: 10% fijo sobre base, cada uno suma cuota.
+- Web: `auto wasap/AUTENFICACION Y PAGOS/comprar.html` con selector, calculadora, formulario y subida de captura. Enlace "Contratar" en index.
+- Backend: `src/services/pricing.js`, `salesStore.js`, `proofStore.js`; endpoints `/public/plans|quote|orders|orders/:id/proof|status|account`, `/mi-cuenta`, `/admin/sales/*`.
+- Panel admin Piston Bot: sección "Ventas / Planes" con pedidos, evidencia, OCR y mover plan; panel usuario `/mi-cuenta?email=&code=`.
+- Contador silencioso: tokens/mensajes/conversaciones por tenant en `piston_sales.json` (callAI y asistente).
+- Evidencias: carpeta Drive configurada; googleapis + cuenta de servicio por env; si no hay credenciales se guarda local en `src/sales_proofs/`.
+- OCR usa paymentVerifier (Tesseract). Auto-activación desactivada por defecto; activar con `AUTO_APPROVE_PAYMENTS=true`.

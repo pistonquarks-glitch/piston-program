@@ -55,3 +55,7 @@ src/sessions_registry.json
 src/sessions/
 dist/
 
+
+src/piston_sales.json
+src/sales_proofs/
+
