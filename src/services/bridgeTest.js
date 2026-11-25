@@ -11,6 +11,7 @@ const { SalesStore, normEmail } = require('./salesStore');
 const { ProofStore } = require('./proofStore');
 const { ClientSecurity } = require('./clientSecurity');
 const clientLaunchers = require('./clientLaunchers');
+const { OcrTrigger } = require('./ocrTrigger');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
 const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
@@ -27,6 +28,8 @@ const salesStore = new SalesStore(DATA_DIR);
 const proofStore = new ProofStore(DATA_DIR);
 const CLIENTS_ROOT = clientLaunchers.CLIENTS_ROOT;
 const clientSecurity = new ClientSecurity(DATA_DIR, CLIENTS_ROOT);
+const ocrTrigger = new OcrTrigger();
+const OCR_SCANS_FILE = path.join(DATA_DIR, 'ocr_scans.jsonl');
 clientLaunchers.ensureExportScript();
 const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
@@ -153,6 +156,13 @@ function isPaymentOperator(...ids) {
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Descarga el media adjunto de un mensaje (imagen) desde Open-WA. Devuelve Buffer o null.
+function isImagePayload(payload) {
+    const p = payload || {};
+    const typo = String(p.type || (p._data && p._data.type) || (p.media && p.media.mimetype) || '').toLowerCase();
+    const mime = String((p.media && p.media.mimetype) || p.mimetype || (p._data && p._data.mimetype) || '').toLowerCase();
+    return typo === 'image' || typo === 'photo' || /image/.test(typo) || /image/.test(mime) || !!(p.hasMedia && /image|photo|media/.test(typo + ' ' + mime));
+}
+
 function downloadMediaBuffer(sessionId, chatId, messageId) {
     return new Promise((resolve) => {
         const target = `${OPENWA_URL}/api/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(chatId)}/${encodeURIComponent(messageId)}/media`;
@@ -232,22 +242,25 @@ function savePaymentRecord(rec) {
 }
 
 // Maneja mensajes con imagen: descarga -> OCR -> parseo -> IA -> responde + registra
-async function handlePaymentImage(sessionId, remoteJid, altIds, payload) {
+async function handlePaymentImage(sessionId, remoteJid, altIds, payload, opts = {}) {
+    const forceOcr = !!opts.forceOcr;
+    const scanMode = !!opts.scanMode;
     // Shape real de Open-WA (message.received): { id, type:'image', chatId, from, mimetype: media.mimetype, media:{mimetype, data, omitted} }
     const messageId = String(payload?.id || payload?.messageId || payload?.key?.id || payload?._data?.id || payload?._data?.id?._serialized || '').trim();
     const chatId = String(payload?.chatId || payload?.from || remoteJid || 'unknown');
     const typo = String(payload?.type || payload?._data?.type || payload?.media?.mimetype || '').toLowerCase();
     const mediaInfo = (payload && payload.media) || payload?._data?.media || null;
     const mime = String((mediaInfo && mediaInfo.mimetype) || payload?.mimetype || payload?._data?.mimetype || '').toLowerCase();
-    const isImage = typo === 'image' || typo === 'photo' || /image/.test(typo) || /image/.test(mime) || !!(payload?.hasMedia && /image|photo|media/.test(typo + ' ' + mime));
+    const isImage = isImagePayload(payload);
     if (!isImage) { logEvent('info', 'payment_skip_non_image', { sessionId, from: remoteJid, type: typo, mime }); return; }
     if (!messageId) { logEvent('warn', 'payment_missing_messageid', { sessionId, from: remoteJid, keys: Object.keys(payload || {}).slice(0, 10) }); return; }
 
-    if (!isPaymentOperator(...altIds)) {
+    if (!forceOcr && !isPaymentOperator(...altIds)) {
         logEvent('info', 'payment_ignored_unauthorized', { sessionId, from: remoteJid });
-        await sendToWhatsApp(sessionId, remoteJid, 'Solo el equipo autorizado de Piston Quarks puede verificar comprobantes de pago. Para consultas, escrÃ­benos.');
+        await sendToWhatsApp(sessionId, remoteJid, 'Solo el equipo autorizado de Piston Quarks puede verificar comprobantes de pago. Para consultas, escríbenos.');
         return;
     }
+    if (forceOcr) logEvent('info', 'ocr_trigger_image_accepted', { sessionId, from: remoteJid, scanMode, altIds: altIds.filter(Boolean).slice(0, 6) });
 
     logEvent('info', 'payment_image_received', { sessionId, from: remoteJid, messageId, type: typo || null, chatId });
 
@@ -271,17 +284,23 @@ async function handlePaymentImage(sessionId, remoteJid, altIds, payload) {
 
     const ext = (mime.includes('png')) ? '.png' : (mime.includes('webp') ? '.webp' : (mime.includes('tif') ? '.tif' : '.jpg'));
     const finalPath = tmpPath.replace(path.extname(tmpName), ext);
-    try { if (path.normalize(finalPath) !== path.normalize(tmpPath)) fs.renameSync(tmpPath, finalPath); }
-    catch (e) { logEvent('error', 'payment_rename_error', { error: e.message }); return; }
+    try {
+        if (path.normalize(finalPath) !== path.normalize(tmpPath)) {
+            try { fs.renameSync(tmpPath, finalPath); }
+            catch (e) { fs.copyFileSync(tmpPath, finalPath); }
+        }
+    } catch (e) { logEvent('error', 'payment_rename_error', { error: e.message }); return; }
 
     let ocr = '';
-    try { ocr = await paymentVerifier.ocrImage(finalPath, 'spa+eng'); }
-    catch (e) { logEvent('error', 'payment_ocr_error', { error: e.message }); }
+    try {
+        ocr = await paymentVerifier.ocrImage(finalPath, 'spa+eng');
+        logEvent('info', 'payment_ocr_done', { sessionId, messageId, chars: ocr.length });
+    } catch (e) { logEvent('error', 'payment_ocr_error', { error: e.message }); }
 
     const parsed = paymentVerifier.parseReceipt(ocr);
     const consistency = paymentVerifier.verifyReceiptConsistency(parsed);
     const aiVerdict = await aiVerifyReceipt(ocr, parsed);
-    const reply = paymentVerifier.buildReceiptReply(parsed, consistency, aiVerdict || null);
+    const reply = scanMode ? ocrTrigger.buildReply(parsed, consistency) : paymentVerifier.buildReceiptReply(parsed, consistency, aiVerdict || null);
 
     const status = consistency.ok ? 'verificado' : 'revision';
     const record = {
@@ -307,7 +326,11 @@ async function handlePaymentImage(sessionId, remoteJid, altIds, payload) {
         imagePath: finalPath,
         rawText: String(ocr || '').slice(0, 2000)
     };
-    savePaymentRecord(record);
+    if (scanMode) {
+        try { fs.appendFileSync(OCR_SCANS_FILE, JSON.stringify({ ...record, mode: 'ocr_trigger' }) + '\n', 'utf8'); logEvent('info', 'ocr_scan_recorded', { from: remoteJid, amount: record.amount, app: record.app }); } catch (e) { logEvent('error', 'ocr_scan_record_error', { error: e.message }); }
+    } else {
+        savePaymentRecord(record);
+    }
     if (process.env.GSHEETS_SYNC === '1') {
         try {
             require('./gsheetsLogger').appendPaymentRow(record)
@@ -1028,6 +1051,29 @@ const server = http.createServer(async (req, res) => {
                 console.log('De:', remoteJid);
                 console.log('Mensaje:', msgText);
                 logEvent('info', 'webhook_received', { sessionId, from: remoteJid, text: msgText, fromMe, event: data.event || data.type || null, ids: altIds.filter(Boolean).slice(0, 8) });
+
+                // Disparador OCR a demanda: "OCR A IMAGEN" activa escaneo de la imagen siguiente
+                // (o de la misma imagen si viene como caption). Aplica desde CUALQUIER número,
+                // incluido el propio (fromMe), sin exigir operador de pago autorizado.
+                const ocrRequested = ocrTrigger.detect(msgText);
+                const isImageNow = isImagePayload(payload);
+                if (ocrRequested || (isImageNow && ocrTrigger.peek(remoteJid))) {
+                    if (isImageNow) {
+                        ocrTrigger.consume(remoteJid);
+                        try {
+                            await handlePaymentImage(sessionId, remoteJid, altIds, payload || {}, { forceOcr: true, scanMode: true });
+                        } catch (e) {
+                            logEvent('error', 'ocr_trigger_handler_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                        }
+                        console.log('[OCR] Imagen escaneada por disparador desde ' + remoteJid);
+                        return;
+                    }
+                    ocrTrigger.arm(remoteJid);
+                    logEvent('info', 'ocr_trigger_armed', { sessionId, from: remoteJid, fromMe });
+                    await sendToWhatsApp(sessionId, remoteJid, 'Modo OCR activado. Envía la imagen (captura Yape/Plin/banco) y te devuelvo banco, monto y remitente.');
+                    console.log('[OCR] Modo activado para ' + remoteJid);
+                    return;
+                }
 
                 // Evitar bucles: ignorar mensajes enviados por el propio bot/sesion
                 // Excepcion: imagenes de un operador de pagos autorizado (self-chat de prueba del OCR)

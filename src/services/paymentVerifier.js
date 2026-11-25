@@ -72,6 +72,18 @@ function parseReceipt(raw) {
     if (dollar) amount = cleanNum(dollar[1]);
   }
   if (amount === 0) amount = null;
+  // OCR suele perder el punto decimal (S/ 189.00 -> S/ 189000). Montos de
+  // comprobantes de Piston Quarks son <= S/ 20,000; si parece centavos, normalizar.
+  // Normalización OCR: números como "S/ 189000" significan S/ 189.00.
+  // Solo si la captura no trae decimales y el valor cabe en rango de planes.
+  if (amount != null && amount >= 10000 && amount <= 299000) {
+    const hasDot = /\d+\.\d{1,2}(?![\d])/.test(String(original));
+    if (!hasDot) {
+      const candidates = [amount / 100, amount / 1000, amount / 10];
+      const priced = candidates.find(v => [100, 189, 299, 349, 500, 750, 1699, 2499].includes(v));
+      amount = priced || amount / 100;
+    }
+  }
 
   // Numero de operacion / referencia
   let reference = null;
@@ -89,12 +101,14 @@ function parseReceipt(raw) {
   const time = pick(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:a\.?\s*m\.?|p\.?\s*m\.?|am|pm)?)/i, t);
 
   // Destinatario / enviado a / recibido por
-  const receiver = pick(/(?:enviado\s+a|para|destinatario|a\s+nombre\s+de|beneficiario|pago\s+a|yapeaste\s+a)\s*[:\-–]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s\.]{2,40})/i, original)
-    || pick(/(?:enviado\s+a|para|destinatario|a\s+nombre\s+de|beneficiario|pago\s+a|yapeaste\s+a)\s*[:\-–]?\s*([A-Za-z][A-Za-z\s\.]{2,40})/i, t);
+  const NAME = '[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ. ]{2,40}?';
+  const STOP = '(?=\\r?\\n|Para|Pata|Banco|Monto|Nro|Fecha|Hora|Yape|Plin|Operacion|Operación|$)';
+  const receiver = pick(new RegExp('(?:enviado\\s+a|para|destinatario|a\\s+nombre\\s+de|beneficiario|pago\\s+a|yapeaste\\s+a|pata)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), original)
+    || pick(new RegExp('(?:enviado\\s+a|para|destinatario|beneficiario)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), t);
 
   // Remitente / de quien / enviado por
-  const sender = pick(/(?:te\s+yapeo|te\s+yapeó|te\s+pago|te\s+pagó|enviado\s+por|de|desde|remitente|origen)\s*[:\-–]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s\.]{2,40})/i, original)
-    || pick(/(?:te\s+yapeo|te\s+pago|enviado\s+por|desde|remitente|origen)\s*[:\-–]?\s*([A-Za-z][A-Za-z\s\.]{2,40})/i, t);
+  const sender = pick(new RegExp('(?:te\\s+yapeo|te\\s+yapeó|te\\s+pago|te\\s+pagó|enviado\\s+por|de|desde|remitente|origen)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), original)
+    || pick(new RegExp('(?:te\\s+yapeo|te\\s+pago|enviado\\s+por|desde|remitente|origen)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), t);
 
   // Teléfono/celular destino o asociado (Perú: 9 dígitos, a veces con máscara)
   const phone = pick(/(?:celular|telefono|tel\.?|numero|número|destino)\s*[:\-–]?\s*(\+?51[\s\-]?\d{3}[\s\-]?\d{3}[\s\-]?\d{3}|\d{3}[\s\-\*]{1,3}\d{3}[\s\-\*]{0,3}\d{0,3}|\d{9})/i, t)

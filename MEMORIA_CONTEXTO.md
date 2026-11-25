@@ -92,3 +92,12 @@ _Actualizado: 2026-11-23_
 - Exportador: `exportar_conversacion.py` usa `opencode session export --sanitize` + python-docx → `CONVERSACION_<session>.docx`. Word solo se genera al ejecutar el .bat.
 - Panel: sección "Sesiones cliente" con crear/actualizar, reparar 20128, pizarra y alertas.
 - Endpoints: `/admin/session-chat/clients|setup|alerts|board|fix-20128`.
+
+
+## OCR a demanda por WhatsApp (2026-11-25)
+- Clave: "OCR A IMAGEN" (también "OCR IMAGEN", "analiza imagen", "escanea imagen"). Al recibirla se arma modo escaneo por 15 min para ese chat; la imagen siguiente, o la misma con caption, se analiza con Tesseract + parseo Yape/Plin/banco.
+- Aplica desde CUALQUIER número, incluido el propio (fromMe), sin exigir operador de pago. El disparador se procesa ANTES del filtro fromMe y de la compuerta.
+- Respuesta: banco/app, monto, remitente, destinatario, N° operación, fecha/hora; nota de que no confirma pago.
+- Registro separado en `src/ocr_scans.jsonl` (modo `ocr_trigger`), no contamina `payments.jsonl`.
+- Parsing corregido: "Pata:" -> destinatario; montos compactos tipo "S/ 189000" -> S/189 cuando no hay punto decimal y cae en rango de planes.
+- Archivo: `src/services/ocrTrigger.js`. Prueba end-to-end OK: APP=Yape, AMOUNT=189, SENDER=Juan Perez, RECEIVER=Piston Quarks, REF=998877665.
