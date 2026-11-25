@@ -59,3 +59,12 @@ dist/
 src/piston_sales.json
 src/sales_proofs/
 
+
+mobile/node_modules/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/app/piston-release.keystore
+mobile/android/piston-release.keystore
+*.apk
+

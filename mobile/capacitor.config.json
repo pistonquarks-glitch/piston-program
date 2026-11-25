@@ -1,0 +1,16 @@
+{
+  "appId": "com.pistonquarks.bot",
+  "appName": "Piston Bot",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0b1220",
+      "showSpinner": false
+    }
+  }
+}

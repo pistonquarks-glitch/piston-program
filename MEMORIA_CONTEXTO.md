@@ -72,3 +72,13 @@ _Actualizado: 2026-11-23_
 - Contador silencioso: tokens/mensajes/conversaciones por tenant en `piston_sales.json` (callAI y asistente).
 - Evidencias: carpeta Drive configurada; googleapis + cuenta de servicio por env; si no hay credenciales se guarda local en `src/sales_proofs/`.
 - OCR usa paymentVerifier (Tesseract). Auto-activación desactivada por defecto; activar con `AUTO_APPROVE_PAYMENTS=true`.
+
+
+## App Android / APK y respuesta móvil (2026-11-25)
+- Verificado en iPhone 14 (agent-browser): `comprar.html`, `index.html`, `/admin`, `/mi-cuenta` son 100% responsivos.
+- `comprar.html`: logo cromado, selector de planes, calculadora, formulario y subida de captura; campo configurable "URL del servidor" (localStorage `piston_api_url`) porque 127.0.0.1 en celular apunta al teléfono.
+- `index.html` landing: logo "P" reemplazado por logo cromado.
+- APK: proyecto Capacitor en `mobile/` (appId `com.pistonquarks.bot`), SDK Android detectado, JDK 21 requerido (JAVA_HOME=jdk-21).
+- APK final: `dist/PistonBot-Android.apk` (3.84 MB), firmado con keystore propio (CN=Piston Quarks), verificado con apksigner v2. SHA256 1163D7394E55F7AC0E090F140B53D525F834C962397AC6AEE0D438B2E4D2B9A1.
+- Seguridad: contraseñas del keystore salieron del código a variables de entorno; llave ignorada por git.
+- Para distribuir: el APK necesita una URL pública del bridge (túnel) configurada desde la propia app.
