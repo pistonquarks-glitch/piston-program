@@ -79,6 +79,7 @@
       <button data-panel="directives">Directivas</button>
       <button data-panel="payments">Pagos</button>
       <button data-panel="sales">Ventas / Planes</button>
+      <button data-panel="sessions">Sesiones cliente</button>
       <button data-panel="config">Configuración</button>
     </nav>
     <div style="margin-top:18px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--muted)">
@@ -260,6 +261,24 @@
       <div id="salesDetail" class="card" style="margin-top:16px;display:none"></div>
     </section>
 
+    <section id="panel-sessions" class="panel">
+      <div class="card" style="margin-bottom:16px">
+        <div class="toolbar"><strong>Conversaciones aisladas por cliente</strong><button class="btn" onclick="setupSessions()">Crear/actualizar carpetas y lanzadores</button><button class="btn ghost" onclick="fix20128()">Reparar lanzador 20128</button><button class="btn ghost" onclick="loadSessions()">Actualizar</button></div>
+        <p class="small muted">Cada cliente tiene su carpeta y su conversación OpenCode separada. Nomenclatura: número · nombre · plan · rubro. Las directivas secretas y la pizarra de alertas viajan en la carpeta.</p>
+        <div id="sessionsList"><div class="empty">Cargando...</div></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="toolbar"><strong>Pizarra de alertas</strong><button class="btn ghost" onclick="loadBoard()">Actualizar</button></div>
+          <pre id="sessionBoard" style="max-height:45vh">Cargando...</pre>
+        </div>
+        <div class="card">
+          <div class="toolbar"><strong>Intentos bloqueados</strong><button class="btn ghost" onclick="loadSessionAlerts()">Actualizar</button></div>
+          <div id="sessionAlerts"><div class="empty">Cargando...</div></div>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-config" class="panel">
       <div class="card">
         <div class="toolbar"><strong>Configuración del bot</strong><button class="btn" onclick="saveConfig()">Guardar cambios</button><button class="btn ghost" onclick="loadConfig()">Recargar</button></div>
@@ -291,13 +310,14 @@ document.querySelectorAll('.nav button').forEach(btn=>{
     const p = btn.dataset.panel;
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
     $('panel-'+p).classList.add('active');
-    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
+    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],sessions:['Sesiones cliente','Carpetas aisladas, lanzadores OpenCode, pizarra y alertas de seguridad.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
     $('title').textContent=titles[p][0]; $('subtitle').textContent=titles[p][1];
     if(p==='dashboard'){loadDashboard();}
     if(p==='chats'){loadChats();}
     if(p==='directives'){loadDirectives();}
     if(p==='payments'){loadPayments();}
     if(p==='sales'){loadSales();}
+    if(p==='sessions'){loadSessions();}
     if(p==='config'){loadConfig();}
   });
 });
@@ -754,6 +774,43 @@ async function changePlan(userId){
   })});
   alert(r.ok?'Plan actualizado.':('Error: '+(r.error||'')));
   loadSales();
+}
+
+
+/* ===== Sesiones cliente / pizarra ===== */
+async function loadSessions(){
+  try{
+    const d=await api('/admin/session-chat/clients');
+    const rows=d.clients||[];
+    $('sessionsList').innerHTML=rows.length?`<table><thead><tr><th>Cliente</th><th>Número</th><th>Plan</th><th>Rubro</th><th>Sesión</th><th>Lanzador</th></tr></thead><tbody>${rows.map(c=>`<tr>
+      <td>${esc(c.name||'')}</td><td>${esc(c.phone||'')}</td><td>${esc(c.planId||'')}</td><td>${esc(c.business||'')}</td>
+      <td class="small">${esc(c.sessionId||'')}</td>
+      <td class="small">${esc(c.launcher||'')}</td>
+    </tr>`).join('')}</tbody></table>`:'<div class="empty">No hay carpetas aún. Registra clientes y pulsa “Crear/actualizar”.</div>';
+  }catch(e){ $('sessionsList').innerHTML='<div class="empty">Error cargando sesiones.</div>'; }
+  loadBoard(); loadSessionAlerts();
+}
+async function setupSessions(){
+  const r=await api('/admin/session-chat/setup',{method:'POST',body:'{}'});
+  alert(r.ok?`Carpetas creadas: ${(r.created||[]).length}. Lanzador 20128 reparado.`:('Error: '+(r.error||'')));
+  loadSessions();
+}
+async function fix20128(){
+  const r=await api('/admin/session-chat/fix-20128',{method:'POST',body:'{}'});
+  alert(r.ok?'Lanzador 20128 reparado.':('Error: '+(r.error||'')));
+}
+async function loadBoard(){
+  try{
+    const r=await fetch('/admin/session-chat/board');
+    $('sessionBoard').textContent=(await r.text()).slice(0,8000);
+  }catch(e){ $('sessionBoard').textContent='No se pudo cargar la pizarra.'; }
+}
+async function loadSessionAlerts(){
+  try{
+    const d=await api('/admin/session-chat/alerts');
+    const rows=d.alerts||[];
+    $('sessionAlerts').innerHTML=rows.length?rows.map(a=>`<div class="chat-item"><div class="jid">${esc(a.type||'')}</div><div class="sub">${esc(a.client||a.jid||'')} · ${esc(new Date(a.ts).toLocaleString('es-PE'))}</div><div class="preview">${esc(a.reason||'')}</div></div>`).join(''):'<div class="empty">Sin alertas.</div>';
+  }catch(e){ $('sessionAlerts').innerHTML='<div class="empty">Error cargando alertas.</div>'; }
 }
 
 </script>

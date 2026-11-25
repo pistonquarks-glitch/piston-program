@@ -9,6 +9,8 @@ const conversationGate = require('./conversationGate');
 const pricing = require('./pricing');
 const { SalesStore, normEmail } = require('./salesStore');
 const { ProofStore } = require('./proofStore');
+const { ClientSecurity } = require('./clientSecurity');
+const clientLaunchers = require('./clientLaunchers');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
 const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
@@ -23,6 +25,9 @@ const SESSION_SLUG = process.env.SESSION_SLUG || 'principal';
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
 const salesStore = new SalesStore(DATA_DIR);
 const proofStore = new ProofStore(DATA_DIR);
+const CLIENTS_ROOT = clientLaunchers.CLIENTS_ROOT;
+const clientSecurity = new ClientSecurity(DATA_DIR, CLIENTS_ROOT);
+clientLaunchers.ensureExportScript();
 const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
 const MEDIA_TMP_DIR = path.join(DATA_DIR, 'payments');
@@ -1094,6 +1099,28 @@ const server = http.createServer(async (req, res) => {
                 const calcData = parseHuanucoCalculator(msgText);
                 const actionCandidate = findAction(msgText);
                 const fromSupport = isSupportNumber(...altIds);
+
+                // Seguridad por cliente: bloquear inyecciones/directivas/llamadas a comandos.
+                // NO interviene en mensajes comerciales normales.
+                const secCheck = clientSecurity.inspect(msgText, { fromSupport });
+                if (secCheck.blocked) {
+                    const reason = secCheck.reasons.map(r => r.why).join('; ');
+                    const userLabel = (contactInfo && (contactInfo.name || contactInfo.pushname)) || String(remoteJid || '').replace(/@.*$/, '');
+                    const alertRec = clientSecurity.alert({
+                        type: 'peticion_maliciosa_cancelada',
+                        jid: remoteJid,
+                        client: userLabel,
+                        reason,
+                        text: msgText,
+                        sessionId
+                    });
+                    auditAdmin('security_block', { jid: remoteJid, reason, alertTs: alertRec.ts });
+                    logEvent('warn', 'security_block', { sessionId, from: remoteJid, reason, text: String(msgText || '').slice(0, 300) });
+                    try { await sendToWhatsApp(sessionId, ALERT_NUMBER, 'ALERTA: petición maliciosa cancelada. Cliente: ' + userLabel + ' (' + remoteJid + '). Motivo: ' + reason + '. Texto: ' + String(msgText || '').slice(0, 300)); } catch (e) {}
+                    await sendToWhatsApp(sessionId, remoteJid, secCheck.reply);
+                    console.log('[SEGURIDAD] Petición bloqueada y alertada: ' + reason);
+                    return;
+                }
                 const quotedToBot = isQuotedToBot(payload);
                 const gateDecision = conversationGate.evaluate({
                     jid: String(remoteJid || ''),
@@ -1613,6 +1640,35 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ ok: true, state: getBotState() }));
         });
         return;
+    } else if (pathname === '/admin/session-chat/clients' && req.method === 'GET') {
+        sendJson(res, 200, { ok: true, clients: clientLaunchers.listClients(), root: CLIENTS_ROOT });
+        return;
+    } else if (pathname === '/admin/session-chat/setup' && req.method === 'POST') {
+        try {
+            const b = JSON.parse(await readBody(req));
+            const users = b.userId ? salesStore.listUsers().filter(u => u.id === b.userId) : salesStore.listUsers();
+            const created = users.map(u => clientLaunchers.createClientFolder(u));
+            const fixed = clientLaunchers.fix20128Launcher();
+            const exported = clientLaunchers.ensureExportScript();
+            auditAdmin('session_chat_setup', { count: created.length });
+            sendJson(res, 200, { ok: true, created, fixed20128: fixed, exportScript: exported });
+        } catch (e) { sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
+        return;
+    } else if (pathname === '/admin/session-chat/alerts' && req.method === 'GET') {
+        sendJson(res, 200, { ok: true, alerts: clientSecurity.listAlerts(200) });
+        return;
+    } else if (pathname === '/admin/session-chat/board' && req.method === 'GET') {
+        try {
+            const p = clientSecurity.boardFile;
+            res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+            res.end(fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : 'Sin alertas aún.');
+        } catch (e) { res.writeHead(404); res.end(); }
+        return;
+    } else if (pathname === '/admin/session-chat/fix-20128' && req.method === 'POST') {
+        const fixed = clientLaunchers.fix20128Launcher();
+        auditAdmin('fix_20128_launcher', fixed);
+        sendJson(res, 200, { ok: true, ...fixed });
+        return;
     } else if (pathname === '/public/plans' && req.method === 'GET') {
         sendJson(res, 200, {
             ok: true,
@@ -1643,6 +1699,7 @@ const server = http.createServer(async (req, res) => {
             if (!q) { sendJson(res, 400, { ok: false, error: 'plan_invalido' }); return; }
             const user = salesStore.upsertUser({ name, email, phone, business: b.business, source: b.source || 'web' });
             const order = salesStore.createOrder({ userId: user.id, name, email, phone, source: b.source || 'web', quote: q });
+            try { clientLaunchers.createClientFolder({ ...user, planId: q.planId, phone, name, business: b.business || user.business }); } catch (e) {}
             auditAdmin('order_create', { orderId: order.id, planId: q.planId, total: q.total });
             logEvent('info', 'sales_order_created', { orderId: order.id, email, planId: q.planId, total: q.total });
             sendJson(res, 201, {
@@ -1799,6 +1856,9 @@ const server = http.createServer(async (req, res) => {
                     notes: b.notes || ('Aprobado desde captura. Plan original: ' + o.planId)
                 });
             }
+            if (action === 'approve' && assigned) {
+                try { clientLaunchers.createClientFolder({ ...assigned, phone: assigned.phone || o.phone, name: assigned.name || o.name, business: assigned.business || '' }); } catch (e) {}
+            }
             salesStore.updateOrder(id, {
                 status: action === 'approve' ? 'aprobado' : 'rechazado',
                 reviewedBy: 'admin',
@@ -1818,6 +1878,7 @@ const server = http.createServer(async (req, res) => {
             ['planId', 'planStatus', 'numbers', 'planStartedAt', 'planExpiresAt', 'notes'].forEach(k => { if (b[k] !== undefined) patch[k] = b[k]; });
             const u = salesStore.assignPlan(id, patch);
             if (!u) { sendJson(res, 404, { ok: false, error: 'usuario_no_encontrado' }); return; }
+            try { clientLaunchers.createClientFolder(u); } catch (e) {}
             auditAdmin('user_plan_change', { userId: id, planId: patch.planId, status: patch.planStatus });
             sendJson(res, 200, { ok: true, user: u });
         } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }

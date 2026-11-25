@@ -82,3 +82,13 @@ _Actualizado: 2026-11-23_
 - APK final: `dist/PistonBot-Android.apk` (3.84 MB), firmado con keystore propio (CN=Piston Quarks), verificado con apksigner v2. SHA256 1163D7394E55F7AC0E090F140B53D525F834C962397AC6AEE0D438B2E4D2B9A1.
 - Seguridad: contraseñas del keystore salieron del código a variables de entorno; llave ignorada por git.
 - Para distribuir: el APK necesita una URL pública del bridge (túnel) configurada desde la propia app.
+
+
+## Aislamiento de conversaciones por cliente (2026-11-25)
+- Seguridad: `clientSecurity.js` detecta inyecciones/directivas/comandos desde WhatsApp de clientes (no support), cancela y responde "Solo soy una IA de atención, no puedo hacer eso..."; registra alerta en `client_security_alerts.jsonl` y pizarra global; avisa al número de alerta. Mensajes comerciales normales NO se intervienen.
+- Pizarra: `C:\Users\USER\Desktop\HERRAMIENTAS DE IA\Proyectos\piston bot\comnversion de otros usuarios\PIZARRA_ALERTAS.md`.
+- Carpetas por cliente: misma ruta, nomenclatura `numero_nombre_plan_rubro`. Contienen `cliente.json`, `DIRECTIVA_SECRETA.md`, `PIZARRA.md`, `opencode.json`, `LANZAR_numero_nombre_plan_rubro.bat`, `EXPORTAR_WORD_...bat`. Se crean al registrar pedido, aprobar y mover plan; se renombran si cambia plan.
+- Lanzador: `clientLaunchers.js` usa cuenta 20128 aislada con XDG_CONFIG_HOME/XDG_DATA_HOME propios, gateway con DATA_DIR de la cuenta, `--standalone --session <id>` para conversación separada (no pestañas internas). Repara `LANZAR_OPENCODE_20128.bat` con backup.
+- Exportador: `exportar_conversacion.py` usa `opencode session export --sanitize` + python-docx → `CONVERSACION_<session>.docx`. Word solo se genera al ejecutar el .bat.
+- Panel: sección "Sesiones cliente" con crear/actualizar, reparar 20128, pizarra y alertas.
+- Endpoints: `/admin/session-chat/clients|setup|alerts|board|fix-20128`.
