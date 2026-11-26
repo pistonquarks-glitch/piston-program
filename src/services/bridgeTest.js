@@ -39,6 +39,8 @@ const OCR_SCANS_FILE = path.join(DATA_DIR, 'ocr_scans.jsonl');
 const WHATSAPP_PAYMENTS_FILE = path.join(DATA_DIR, 'whatsapp_payments.jsonl');
 const SUPERVISOR_JID = '51928059006@c.us';
 const supervisorAlertAt = new Map();
+const polledImageIds = new Set();
+const POLL_IMAGES_MS = parseInt(process.env.POLL_IMAGES_MS || '8000', 10);
 clientLaunchers.ensureExportScript();
 const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
@@ -2154,6 +2156,71 @@ async function tickScheduledMessages() {
     }
     if (changed) writeScheduled(items);
 }
+
+// Sondeo de imágenes entrantes: Open-WA no siempre reenvía imágenes por webhook.
+// Consultamos la API y procesamos capturas nuevas que tengan el disparador armado.
+async function pollIncomingImages() {
+    try {
+        const url = `${OPENWA_URL}/api/sessions/${encodeURIComponent(LAST_SESSION_ID)}/messages?limit=30`;
+        const body = await new Promise((resolve) => {
+            http.get(url, { headers: { 'X-API-Key': OPENWA_API_KEY } }, (res) => {
+                let b = '';
+                res.on('data', (c) => b += c);
+                res.on('end', () => resolve(b));
+            }).on('error', () => resolve(''));
+        });
+        if (!body) return;
+        const data = JSON.parse(body);
+        const msgs = (data.messages || data || []);
+        const images = msgs.filter(m => {
+            const t = String(m.type || '').toLowerCase();
+            const mime = String(m.mediaMimetype || '').toLowerCase();
+            return (t === 'image' || /image/.test(mime)) && String(m.direction || '') === 'incoming';
+        });
+        for (const m of images.slice(0, 5)) {
+            const id = String(m.id || m.waMessageId || '');
+            if (!id || polledImageIds.has(id)) continue;
+            polledImageIds.add(id);
+            const jid = String(m.from || m.chatId || '');
+            if (!jid || jid.endsWith('@g.us')) continue;
+            const state = ocrTrigger.get(jid);
+            if (!state) continue; // solo si hay disparador armado
+            logEvent('info', 'poll_image_found', { from: jid, id, intent: state.intent && state.intent.planId });
+            const payload = {
+                id: m.waMessageId || id,
+                type: 'image',
+                mimetype: m.mediaMimetype || 'image/jpeg',
+                from: jid,
+                chatId: m.chatId || jid,
+                body: ''
+            };
+            // Descargar media por API (el webhook no trae datos embebidos)
+            const msgId = String(m.waMessageId || m.id || '');
+            const mediaBuf = msgId ? await downloadMediaBuffer(LAST_SESSION_ID, m.chatId || jid, msgId) : null;
+            if (mediaBuf) payload.media = { mimetype: m.mediaMimetype || 'image/jpeg', data: mediaBuf.toString('base64') };
+            const consumed = ocrTrigger.consume(jid) || {};
+            await sendToWhatsApp(LAST_SESSION_ID, jid, ocrTrigger.buildProgressReply());
+            try {
+                const ocrResult = await handlePaymentImage(LAST_SESSION_ID, jid, [jid], payload, { forceOcr: true, scanMode: true, decisionMode: true });
+                if (ocrResult) {
+                    await finalizeWhatsappPayment(LAST_SESSION_ID, jid, [jid], '', ocrResult, {
+                        intent: consumed.intent || null,
+                        client: jid.replace(/@.*$/, ''),
+                        business: ''
+                    });
+                }
+            } catch (e) {
+                logEvent('error', 'poll_image_process_error', { from: jid, error: String(e && e.message || e).slice(0, 200) });
+            }
+        }
+        if (polledImageIds.size > 200) {
+            const arr = Array.from(polledImageIds);
+            arr.slice(0, 100).forEach(x => polledImageIds.delete(x));
+        }
+    } catch (e) { /* el sondeo nunca debe tumbar el bridge */ }
+}
+
+setInterval(() => { pollIncomingImages().catch(() => {}); }, POLL_IMAGES_MS);
 
 server.listen(PORT, ADMIN_BIND, () => {
     console.log('ðŸš€ Puente Piston Quarks activo en puerto ' + PORT);

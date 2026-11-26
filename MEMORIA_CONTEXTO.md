@@ -107,3 +107,10 @@ _Actualizado: 2026-11-23_
 - Causa raíz de "el bot no responde": OPENWA_API_KEY estaba vacía -> todos los envíos daban 401. El bridge ahora lee la key de `C:\Users\USER\openwa-data\.api-key` automáticamente. Verificado: texto normal genera `action_sent` sin 401.
 - Notas de voz: `voiceTranscriber.js` + `transcribe_local.py` (faster-whisper tiny, CPU int8, gratis, español). El webhook detecta `ptt/audio`, descarga media, transcribe y procesa el texto por el flujo normal. OpenRouter solo como respaldo (requiere $0.50, por eso falla).
 - Prueba real con voz: "Hola, puedes responderme por favor." -> transcrito y respondido (`action_sent`).
+
+
+## Sondeo de imagenes entrantes (2026-11-26)
+- Open-WA NO reenvia todas las imagenes por webhook; las guarda en su API. Se agrego `pollIncomingImages()` cada 8s (POLL_IMAGES_MS) que consulta `/api/sessions/<session>/messages`, detecta imagenes `incoming` nuevas con dedupe y, si hay disparador armado, las descarga y procesa con el mismo flujo OCR.
+- Webhook de Open-WA apunta a `https://wa.pistonquarks.store/webhook` (tunel). Open-WA rechaza destinos locales (SSRF), asi que no se puede apuntar a 127.0.0.1.
+- Causa del "no responde": OPENWA_API_KEY vacia -> 401. Ya se lee de `C:\Users\USER\openwa-data\.api-key`.
+- Prueba final con imagen real: disparador PAGO DE suscripcion + captura S/100 => status=aprobado, plan=subscription, orden creada.
