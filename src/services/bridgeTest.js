@@ -1140,10 +1140,12 @@ async function sendToWhatsApp(sessionId, chatId, message) {
     const target = `${OPENWA_URL}/api/sessions/${encodeURIComponent(sessionId)}/messages/send-text`;
 
     return new Promise((resolve, reject) => {
+        const bodyBuf = Buffer.from(payload, 'utf8');
         const req = http.request(target, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
+                'Content-Length': bodyBuf.length,
                 'X-API-Key': OPENWA_API_KEY
             }
         }, (res) => {
@@ -1170,7 +1172,7 @@ async function sendToWhatsApp(sessionId, chatId, message) {
             try { req.destroy(); } catch (e) { /* ignore */ }
             resolve('{"error":"timeout"}');
         });
-        req.write(payload);
+        req.write(bodyBuf);
         req.end();
     });
 }

@@ -148,3 +148,9 @@ _Actualizado: 2026-11-23_
 ## Remitente Yape/Plin (2026-11-26)
 - Los comprobantes Yape/Plin ponen el nombre del remitente sin etiqueta "De:". Se agrego extraccion del nombre tras "Yapeaste/Plineaste" o antes de "- Yape/- Plin" (ej. "Isaias Rojas").
 - Se evita confundir el numero de cuenta enmascarado (ej. 225) con el monto, priorizando precios de plan (100/500/700).
+
+
+## Codificacion UTF-8 en envios (2026-11-26)
+- sendToWhatsApp ahora envia Buffer.from(payload,'utf8') con Content-Type application/json; charset=utf-8 y Content-Length, para que tildes, enie y signos de interrogacion lleguen bien a WhatsApp.
+- Los signos ? vistos en la consola de PowerShell son solo display; los bytes reales tienen 0xf3 (o), etc. Verificado en la API de Open-WA.
+- Configuracion de dos mensajes para otro destino en src/otro_destino_config.json.
