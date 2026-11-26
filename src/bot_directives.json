@@ -49,6 +49,11 @@
       "text": "Mismo número de soporte +51 930 640 071; supervisor único reconocido +51928059006 (LID 173929649971325, local 928059006). Sin Telegram ni números/canales nuevos por ahora.",
       "addedAt": "2026-11-20T00:00:00.000Z",
       "from": "support"
+    },
+    {
+      "text": "OCR en WhatsApp: si el mensaje contiene OCR A IMAGEN, OCR IMAGEN, CAPTURA DE, PAGO DE, analiza imagen, escanea imagen o comprobante de pago, activar escaneo de la imagen siguiente (o de la misma si viene adjunta). Responder primero Procesando tu captura, un momento por favor. Si no indican el motivo del pago, preguntar Cuál es el motivo de este pago. Extraer banco, monto, remitente, operación. Validar y activar el plan automáticamente cuando coincida; si faltan datos o hay duda, avisar al supervisor 928059006 y decir que quedó en revisión; si el monto no coincide, rechazar con el motivo.",
+      "addedAt": "2026-11-26T00:00:00.000Z",
+      "from": "system_ocr_instructions"
     }
   ]
 }
