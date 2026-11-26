@@ -119,3 +119,10 @@ _Actualizado: 2026-11-23_
 ## OCR despues de la imagen (2026-11-26)
 - "OCR" suelto es clave valida. Si el usuario envia la imagen PRIMERO y luego escribe OCR (con o sin motivo), el bridge recuerda la ultima imagen por numero (10 min) y la procesa igual.
 - Antes la imagen sin disparador se descartaba y el texto OCR solo no coincidia con ninguna clave.
+
+
+## Modo agente OCR automatico (2026-11-26)
+- Toda imagen entrante se evalUA sola con OCR local; si parece comprobante (Yape/Plin/banco + monto + operacion) se procesa y decide sin esperar claves del usuario.
+- El plan se infiere por el monto cuando el usuario no escribe motivo. Si no coincide con un plan, va a revision y alerta al supervisor.
+- Imagenes que no parecen comprobante se ignoran en silencio. Las claves PAGO DE/CAPTURA DE/OCR siguen reforzando el disparador.
+- Evaluacion: `looksLikeReceiptImage()` en bridgeTest.js. Directiva agregada en bot_directives.json y doc actualizado.

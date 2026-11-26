@@ -61,3 +61,8 @@ Si envías una nota de voz, el bot la transcribe con Whisper local (gratis) y pr
 $body = '{"payload":{"body":"PAGO DE suscripcion mensual","from":"51930640071@c.us","type":"chat","session":"b1ff3640-6e6e-44bb-a601-42d5c605ceea"}}'
 Invoke-WebRequest -Uri http://127.0.0.1:2013/webhook -Method POST -ContentType application/json -Body $body
 ```
+
+
+## Modo agente (nuevo, sin escribir nada)
+
+El bot ya no espera que escribas una clave: **en cuanto recibe una imagen, la analiza solo**. Si detecta que es comprobante (Yape/Plin/banco + monto + operación), corre el OCR automáticamente y aplica la decisión correspondiente. Si no es comprobante, no hace nada. Las claves (`PAGO DE`, `CAPTURA DE`, `OCR`) siguen funcionando para reforzar el disparador o indicar el motivo del pago.

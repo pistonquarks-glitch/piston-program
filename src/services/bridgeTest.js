@@ -40,6 +40,7 @@ const WHATSAPP_PAYMENTS_FILE = path.join(DATA_DIR, 'whatsapp_payments.jsonl');
 const SUPERVISOR_JID = '51928059006@c.us';
 const supervisorAlertAt = new Map();
 const polledImageIds = new Set();
+const autoProcessedImageIds = new Set();
 const POLL_IMAGES_MS = parseInt(process.env.POLL_IMAGES_MS || '8000', 10);
 clientLaunchers.ensureExportScript();
 const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
@@ -948,6 +949,37 @@ async function alertHuman(sessionId, remoteJid, reason, userText, botText) {
     }
 }
 
+// Decide con OCR local si una imagen parece comprobante de pago.
+async function looksLikeReceiptImage(payload, sessionId, remoteJid, altIds) {
+    try {
+        const msgId = String(payload?.id || payload?.messageId || payload?._data?.id || '').trim();
+        const chatId = String(payload?.chatId || payload?.from || remoteJid || 'unknown');
+        const mediaInfo = (payload && payload.media) || (payload && payload._data && payload._data.media) || null;
+        const mime = String((mediaInfo && mediaInfo.mimetype) || payload?.mimetype || payload?._data?.mimetype || '').toLowerCase();
+        let buf = null;
+        if (mediaInfo && typeof mediaInfo.data === 'string' && mediaInfo.data.length) {
+            try { buf = Buffer.from(mediaInfo.data, 'base64'); } catch (e) {}
+        }
+        if (!buf && msgId) buf = await downloadMediaBuffer(sessionId, chatId, msgId);
+        if (!buf) return false;
+        try { fs.mkdirSync(MEDIA_TMP_DIR, { recursive: true }); } catch (e) {}
+        const ext = mime.includes('png') ? '.png' : (mime.includes('webp') ? '.webp' : '.jpg');
+        const tmp = path.join(MEDIA_TMP_DIR, 'auto_' + Date.now() + '_' + String(msgId).replace(/[^A-Za-z0-9_-]/g, '') + ext);
+        fs.writeFileSync(tmp, buf);
+        let text = '';
+        try { text = await paymentVerifier.ocrImage(tmp, 'spa+eng'); } catch (e) {}
+        try { fs.unlinkSync(tmp); } catch (e) {}
+        if (!text) return false;
+        const p = paymentVerifier.parseReceipt(text);
+        const markerRe = /yape|plin|bcp|bbva|interbank|scotiabank|banco\s+de\s+la\s+naci[oó]n|banbif|pichincha|mibanco|transferencia|comprobante|pago\s+exitoso|operaci[oó]n/i;
+        const hasAmount = p.amount != null && p.amount > 0;
+        const hasMarker = markerRe.test(text) || !!p.app || !!p.method;
+        const ok = hasAmount && hasMarker;
+        logEvent('info', 'ocr_auto_check', { sessionId, from: remoteJid, ok, amount: p.amount, app: p.app || p.method || null });
+        return ok;
+    } catch (e) { return false; }
+}
+
 async function alertSupervisor(sessionId, rec) {
     try {
         const key = String(rec.jid || '');
@@ -1217,10 +1249,38 @@ const server = http.createServer(async (req, res) => {
 
                 // Disparador OCR a demanda / pago: CAPTURA DE, PAGO DE, OCR A IMAGEN.
                 // Aplica desde CUALQUIER número, incluido el propio (fromMe).
-                const ocrRequested = ocrTrigger.detect(msgText);
                 const isImageNow = isImagePayload(payload);
+                const ocrRequested = ocrTrigger.detect(msgText);
                 const armedState = ocrTrigger.get(remoteJid);
                 const textIntent = ocrTrigger.extractPlan(msgText);
+                // Modo agente: toda imagen entrante se evalúa sola; si parece comprobante,
+                // se corre OCR y se decide sin esperar que el usuario escriba ninguna clave.
+                if (isImageNow && !isVoice && !String(remoteJid || '').endsWith('@g.us')) {
+                    const imgId = String(payload?.id || payload?.messageId || payload?._data?.id || '').trim();
+                    if (!imgId || !autoProcessedImageIds.has(imgId)) {
+                        const looksReceipt = await looksLikeReceiptImage(payload, sessionId, remoteJid, altIds);
+                        if (looksReceipt) {
+                            if (imgId) autoProcessedImageIds.add(imgId);
+                            const intent = ocrTrigger.extractPlan(msgText) || null;
+                            await sendToWhatsApp(sessionId, remoteJid, ocrTrigger.buildProgressReply());
+                            try {
+                                const ocrResult = await handlePaymentImage(sessionId, remoteJid, altIds, payload || {}, { forceOcr: true, scanMode: true, decisionMode: true });
+                                if (ocrResult) {
+                                    await finalizeWhatsappPayment(sessionId, remoteJid, altIds, msgText, ocrResult, {
+                                        intent,
+                                        client: (contactInfo && (contactInfo.name || contactInfo.pushname)) || String(remoteJid || '').replace(/@.*$/, ''),
+                                        business: ''
+                                    });
+                                }
+                            } catch (e) {
+                                logEvent('error', 'ocr_auto_process_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                            }
+                            return;
+                        }
+                        logEvent('info', 'ocr_auto_not_receipt', { sessionId, from: remoteJid, id: imgId });
+                    }
+                }
+
 
                 if (isImageNow && !ocrRequested && !armedState) {
                     try { ocrTrigger.rememberImage(remoteJid, payload || {}); } catch (e) {}

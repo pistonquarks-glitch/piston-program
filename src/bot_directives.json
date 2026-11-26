@@ -54,6 +54,11 @@
       "text": "OCR en WhatsApp: si el mensaje contiene OCR A IMAGEN, OCR IMAGEN, CAPTURA DE, PAGO DE, analiza imagen, escanea imagen o comprobante de pago, activar escaneo de la imagen siguiente (o de la misma si viene adjunta). Responder primero Procesando tu captura, un momento por favor. Si no indican el motivo del pago, preguntar Cuál es el motivo de este pago. Extraer banco, monto, remitente, operación. Validar y activar el plan automáticamente cuando coincida; si faltan datos o hay duda, avisar al supervisor 928059006 y decir que quedó en revisión; si el monto no coincide, rechazar con el motivo.",
       "addedAt": "2026-11-26T00:00:00.000Z",
       "from": "system_ocr_instructions"
+    },
+    {
+      "text": "Modo agente OCR: cuando llegue una imagen, analízala automáticamente sin esperar instrucciones del usuario. Si contiene datos de comprobante (Yape, Plin, banco, monto, operación), corre el OCR, extrae banco, monto y remitente, y decide: valida y activa el plan si coincide; si falta datos o hay duda, avisa al supervisor 928059006 y marca revisión; si el monto no coincide, rechaza con el motivo. Si la imagen no es comprobante, no intervengas.",
+      "addedAt": "2026-11-26T00:00:00.000Z",
+      "from": "system_auto_ocr"
     }
   ]
 }
