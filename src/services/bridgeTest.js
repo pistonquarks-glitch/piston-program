@@ -1222,6 +1222,11 @@ const server = http.createServer(async (req, res) => {
                 const armedState = ocrTrigger.get(remoteJid);
                 const textIntent = ocrTrigger.extractPlan(msgText);
 
+                if (isImageNow && !ocrRequested && !armedState) {
+                    try { ocrTrigger.rememberImage(remoteJid, payload || {}); } catch (e) {}
+                    logEvent('info', 'ocr_image_remembered', { sessionId, from: remoteJid });
+                }
+
                 if (isImageNow && (ocrRequested || armedState)) {
                     const state = ocrTrigger.consume(remoteJid) || {};
                     const intent = textIntent || state.intent || null;
@@ -1242,6 +1247,27 @@ const server = http.createServer(async (req, res) => {
                     }
                     console.log('[PAGO/OCR] Captura procesada y decidida desde ' + remoteJid);
                     return;
+                }
+
+                if (ocrRequested && !isImageNow) {
+                    const saved = ocrTrigger.takeLastImage(remoteJid);
+                    if (saved && isImagePayload(saved)) {
+                        const intent = textIntent || (armedState && armedState.intent) || null;
+                        await sendToWhatsApp(sessionId, remoteJid, ocrTrigger.buildProgressReply());
+                        try {
+                            const ocrResult = await handlePaymentImage(sessionId, remoteJid, altIds, saved, { forceOcr: true, scanMode: true, decisionMode: true });
+                            if (ocrResult) {
+                                await finalizeWhatsappPayment(sessionId, remoteJid, altIds, msgText, ocrResult, {
+                                    intent,
+                                    client: (contactInfo && (contactInfo.name || contactInfo.pushname)) || String(remoteJid || '').replace(/@.*$/, ''),
+                                    business: ''
+                                });
+                            }
+                        } catch (e) {
+                            logEvent('error', 'ocr_saved_image_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                        }
+                        return;
+                    }
                 }
 
                 if (ocrRequested || armedState) {

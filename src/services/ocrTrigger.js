@@ -4,6 +4,7 @@
 const pricing = require('./pricing');
 
 const KEYWORDS = [
+  /^ocr$/i,
   /ocr\s+a?\s+imagen/i,
   /ocr\s+imagen/i,
   /analiza\s+(la\s+)?imagen/i,
@@ -25,6 +26,7 @@ class OcrTrigger {
   constructor(ttlMs = 15 * 60 * 1000) {
     this.ttlMs = ttlMs;
     this.pending = new Map();
+    this.lastImage = new Map();
   }
 
   detect(text) {
@@ -79,6 +81,19 @@ class OcrTrigger {
     if (!st) return false;
     st.intent = intent;
     return true;
+  }
+
+  rememberImage(jid, payload) {
+    this.lastImage.set(String(jid || 'default'), { payload, ts: Date.now() });
+  }
+
+  takeLastImage(jid, maxAgeMs = 10 * 60 * 1000) {
+    const key = String(jid || 'default');
+    const rec = this.lastImage.get(key);
+    this.lastImage.delete(key);
+    if (!rec) return null;
+    if (Date.now() - rec.ts > maxAgeMs) return null;
+    return rec.payload;
   }
 
   buildProgressReply() {

@@ -114,3 +114,8 @@ _Actualizado: 2026-11-23_
 - Webhook de Open-WA apunta a `https://wa.pistonquarks.store/webhook` (tunel). Open-WA rechaza destinos locales (SSRF), asi que no se puede apuntar a 127.0.0.1.
 - Causa del "no responde": OPENWA_API_KEY vacia -> 401. Ya se lee de `C:\Users\USER\openwa-data\.api-key`.
 - Prueba final con imagen real: disparador PAGO DE suscripcion + captura S/100 => status=aprobado, plan=subscription, orden creada.
+
+
+## OCR despues de la imagen (2026-11-26)
+- "OCR" suelto es clave valida. Si el usuario envia la imagen PRIMERO y luego escribe OCR (con o sin motivo), el bridge recuerda la ultima imagen por numero (10 min) y la procesa igual.
+- Antes la imagen sin disparador se descartaba y el texto OCR solo no coincidia con ninguna clave.
