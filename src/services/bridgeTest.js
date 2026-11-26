@@ -36,6 +36,8 @@ const CLIENTS_ROOT = clientLaunchers.CLIENTS_ROOT;
 const clientSecurity = new ClientSecurity(DATA_DIR, CLIENTS_ROOT);
 const ocrTrigger = new OcrTrigger();
 const OCR_SCANS_FILE = path.join(DATA_DIR, 'ocr_scans.jsonl');
+const OTRO_DESTINO_CONFIG_FILE = path.join(__dirname, '..', 'otro_destino_config.json');
+function readOtroDestinoConfig() { try { return JSON.parse(fs.readFileSync(OTRO_DESTINO_CONFIG_FILE, 'utf8')); } catch (e) { return { enabled: false }; } }
 const WHATSAPP_PAYMENTS_FILE = path.join(DATA_DIR, 'whatsapp_payments.jsonl');
 const SUPERVISOR_JID = '51928059006@c.us';
 const supervisorAlertAt = new Map();
@@ -1117,6 +1119,12 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
         reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
     }
     await sendToWhatsApp(sessionId, remoteJid, reply);
+    if (isOtherDestination) {
+        const cfg = readOtroDestinoConfig();
+        if (cfg.enabled !== false && cfg.sendTwoMessages !== false && cfg.reply2) {
+            try { await sendToWhatsApp(sessionId, remoteJid, cfg.reply2); } catch (e) {}
+        }
+    }
     return rec;
 }
 

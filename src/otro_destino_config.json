@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "reply1": "No coincide con nuestros planes ni con el número oficial de Piston Quarks, así que no se registra como pago.",
+  "reply2": "¿Deseas saber más sobre nuestro servicio gratuito de escaneo de imágenes?",
+  "sendTwoMessages": true,
+  "note": "Cuando el OCR detecta un pago cuyo destinatario no es el número oficial, se envían estos dos mensajes seguidos."
+}
