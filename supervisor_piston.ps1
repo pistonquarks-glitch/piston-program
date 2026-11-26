@@ -33,13 +33,15 @@ function Write-Log {
 
 function Test-Process {
     param([string]$Name, [string]$CmdPart)
-    $procs = Get-Process -Name $Name -ErrorAction SilentlyContinue
-    foreach ($p in $procs) {
-        try {
-            $c = (Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)").CommandLine
-            if ($c -and $c.Contains($CmdPart)) { return $true }
-        } catch { }
-    }
+    # Primero: coincidencia por CommandLine (insensible a mayusculas).
+    try {
+        $procs = Get-CimInstance Win32_Process -Filter "Name = '$Name.exe'" -ErrorAction SilentlyContinue
+        foreach ($p in $procs) {
+            if ($p.CommandLine -and $p.CommandLine.ToLowerInvariant().Contains($CmdPart.ToLowerInvariant())) { return $true }
+        }
+    } catch { }
+    # Fallback: si es el bridge y el puerto responde, esta vivo aunque CIM falle.
+    if ($CmdPart -like '*bridgeTest.js*' -and (Test-Port -Port 2013)) { return $true }
     return $false
 }
 
@@ -67,6 +69,8 @@ function Load-BotEnv {
 
 function Start-Bridge {
     Load-BotEnv
+    $waKeyFile = "C:\Users\USER\openwa-data\.api-key"
+    if (Test-Path $waKeyFile) { $env:OPENWA_API_KEY = (Get-Content $waKeyFile -Raw).Trim() }
     Write-Log "Bridge no detectado. Reiniciando con OPENROUTER_API_KEY=$(if ($env:OPENROUTER_API_KEY) {'SI'} else {'NO'}) y GSHEETS_SYNC=$($env:GSHEETS_SYNC)..."
     Start-Process -FilePath "node.exe" -ArgumentList "`"$projectDir\src\services\bridgeTest.js`"" -WorkingDirectory $projectDir -WindowStyle Hidden
     Start-Sleep -Seconds 8
