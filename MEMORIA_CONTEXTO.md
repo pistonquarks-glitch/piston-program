@@ -126,3 +126,9 @@ _Actualizado: 2026-11-23_
 - El plan se infiere por el monto cuando el usuario no escribe motivo. Si no coincide con un plan, va a revision y alerta al supervisor.
 - Imagenes que no parecen comprobante se ignoran en silencio. Las claves PAGO DE/CAPTURA DE/OCR siguen reforzando el disparador.
 - Evaluacion: `looksLikeReceiptImage()` en bridgeTest.js. Directiva agregada en bot_directives.json y doc actualizado.
+
+
+## Correccion OCR montos y regla dura (2026-11-26)
+- OCR de Plin/Interbank leia "S/ 2.00" como "200"; se agrego extraccion de monto suelto por linea y normalizacion (200 -> 2).
+- Regla dura: solo se aprueba si el monto detectado es exactamente un precio de plan (100/500/700). Otros montos van a revision y alertan al supervisor.
+- Prueba: captura S/2.00 => status=revision, sin activar plan. Antes se aprobaba como S/100 por el OCR viejo.

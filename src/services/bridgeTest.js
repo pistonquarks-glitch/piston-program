@@ -1030,6 +1030,12 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
     if (planId && amount > 0 && expected != null && Math.abs(amount - expected) > 0.5) {
         reasons.push('el monto S/ ' + Number(amount).toFixed(2) + ' no coincide con ' + (pricing.PLANS[planId] || {}).label + ' (S/ ' + Number(expected).toFixed(2) + ')');
     }
+    // Regla dura: solo se aprueba si el monto detectado es EXACTAMENTE un precio de plan.
+    const validPrices = Object.values(pricing.PLANS).map(p => p.price);
+    if (amount > 0 && !validPrices.some(v => Math.abs(v - amount) < 0.01)) {
+        reasons.push('el monto S/ ' + Number(amount).toFixed(2) + ' no corresponde a ningún plan ('
+            + validPrices.map(v => 'S/' + v).join(', ') + ')');
+    }
     if (!planId) reasons.push('no pude identificar a qué plan corresponde el pago');
 
     const approved = reasons.length === 0;

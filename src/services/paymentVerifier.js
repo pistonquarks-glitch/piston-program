@@ -73,6 +73,14 @@ function parseReceipt(raw) {
     const dollar = t.match(/\$\s*([\d][\d,]*(?:\.\d{1,2})?)/i);
     if (dollar) amount = cleanNum(dollar[1]);
   }
+  // Comprobantes Plin/Yape: el OCR a veces deja solo el numero (ej. "200" = S/ 2.00).
+  if (amount == null) {
+    const bareNum = t.match(/(?:^|\n)\s*([\d]{1,4}(?:\.\d{1,2})?)\s*(?:\r?\n|$)/m);
+    if (bareNum) {
+      const v = cleanNum(bareNum[1]);
+      if (v > 0) amount = v > 100 ? v / 100 : v;
+    }
+  }
   if (amount === 0) amount = null;
   // OCR suele perder el punto decimal (S/ 189.00 -> S/ 189000). Montos de
   // comprobantes de Piston Quarks son <= S/ 20,000; si parece centavos, normalizar.
