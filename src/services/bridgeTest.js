@@ -1085,21 +1085,32 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
         }
     }
 
+    const isOtherDestination = !approved && amount > 0 && !validPrices.some(v => Math.abs(v - amount) < 0.01);
     const rec = {
         ts: new Date().toISOString(), jid: remoteJid, client: userLabel, text: String(text || '').slice(0, 600),
         intentLabel: (intent && intent.label) || null, planId, expected, amount,
         app: parsed.app || parsed.method || null, sender: parsed.sender || null, receiver: parsed.receiver || null,
-        reference: parsed.reference || null, reasons, status: approved ? 'aprobado' : (needsReview ? 'revision' : 'rechazado'),
+        reference: parsed.reference || null, reasons,
+        status: approved ? 'aprobado' : (isOtherDestination ? 'otro_destino' : (needsReview ? 'revision' : 'rechazado')),
         orderId, assignedUserId: assigned && assigned.id, imagePath: ocrResult && ocrResult.record && ocrResult.record.imagePath
     };
     try { fs.appendFileSync(WHATSAPP_PAYMENTS_FILE, JSON.stringify(rec) + '\n', 'utf8'); } catch (e) {}
     logEvent(approved ? 'info' : 'warn', 'whatsapp_payment_decision', { sessionId, from: remoteJid, status: rec.status, planId, amount, reasons });
 
-    if (!approved) {
+    if (!approved && !isOtherDestination) {
         await alertSupervisor(sessionId, { ...rec, reason });
     }
 
-    const reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
+    let reply;
+    if (isOtherDestination) {
+        reply = [
+            'Analicé la imagen, pero no parece un pago de Piston Quarks.',
+            'Monto detectado: S/ ' + Number(amount).toFixed(2) + '. Nuestros planes son S/ 100, S/ 500 y S/ 700.',
+            'Si este comprobante era para otra persona o servicio, no lo registramos. Si pagas a Piston, envía la captura correcta.'
+        ].join('\n');
+    } else {
+        reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
+    }
     await sendToWhatsApp(sessionId, remoteJid, reply);
     return rec;
 }

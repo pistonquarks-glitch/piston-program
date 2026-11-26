@@ -132,3 +132,8 @@ _Actualizado: 2026-11-23_
 - OCR de Plin/Interbank leia "S/ 2.00" como "200"; se agrego extraccion de monto suelto por linea y normalizacion (200 -> 2).
 - Regla dura: solo se aprueba si el monto detectado es exactamente un precio de plan (100/500/700). Otros montos van a revision y alertan al supervisor.
 - Prueba: captura S/2.00 => status=revision, sin activar plan. Antes se aprobaba como S/100 por el OCR viejo.
+
+
+## Otro destino (2026-11-26)
+- Si el monto detectado no es un precio de plan (100/500/700), se clasifica como "otro_destino": probable transferencia a otra persona. Se informa al cliente que no parece pago de Piston, NO activa plan y NO alerta al supervisor.
+- Diferencia con "revision": revision es cuando faltan datos de un pago que si parece de Piston; otro_destino es cuando el monto claramente no es de ningun plan.
