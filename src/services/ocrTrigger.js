@@ -27,6 +27,7 @@ class OcrTrigger {
     this.ttlMs = ttlMs;
     this.pending = new Map();
     this.lastImage = new Map();
+    this.lastDescription = new Map();
   }
 
   detect(text) {
@@ -94,6 +95,42 @@ class OcrTrigger {
     if (!rec) return null;
     if (Date.now() - rec.ts > maxAgeMs) return null;
     return rec.payload;
+  }
+
+  saveDescription(jid, text) {
+    this.lastDescription.set(String(jid || 'default'), { text, ts: Date.now() });
+  }
+
+  takeDescription(jid, maxAgeMs = 15 * 60 * 1000) {
+    const key = String(jid || 'default');
+    const rec = this.lastDescription.get(key);
+    this.lastDescription.delete(key);
+    if (!rec) return null;
+    if (Date.now() - rec.ts > maxAgeMs) return null;
+    return rec.text;
+  }
+
+  isYes(text) {
+    const v = String(text || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return /^(si|s|y|ya|claro|vale|ok|okey|afirmativo|describelo|describe|descripcion|dame el ocr|pasa el ocr|ver ocr)/.test(v);
+  }
+
+  buildAskDescriptionReply() {
+    return 'Detecté una imagen. ¿Quieres que te describa literalmente lo que encontré en el OCR? Responde SÍ.';
+  }
+
+  buildLiteralDescription(parsed) {
+    const p = parsed || {};
+    const money = (n) => (n != null && Number(n) > 0) ? 'S/ ' + Number(n).toFixed(2) : 'monto no detectado';
+    const lines = [];
+    lines.push('Descripción literal del comprobante:');
+    lines.push('Medio: ' + (p.app || p.method || 'no detectado'));
+    lines.push('Remitente (quien envió): ' + (p.sender || 'no detectado'));
+    lines.push('Destinatario (a quien se envió): ' + (p.receiver || p.phone || 'no detectado'));
+    lines.push('Monto: ' + money(p.amount));
+    lines.push('N° de operación: ' + (p.reference || 'no detectado'));
+    if (p.date || p.time) lines.push('Fecha/hora: ' + [p.date, p.time].filter(Boolean).join(' '));
+    return lines.join('\n');
   }
 
   buildProgressReply() {

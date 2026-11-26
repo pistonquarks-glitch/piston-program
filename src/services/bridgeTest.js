@@ -1030,6 +1030,13 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
     if (planId && amount > 0 && expected != null && Math.abs(amount - expected) > 0.5) {
         reasons.push('el monto S/ ' + Number(amount).toFixed(2) + ' no coincide con ' + (pricing.PLANS[planId] || {}).label + ' (S/ ' + Number(expected).toFixed(2) + ')');
     }
+    // Solo es pago hacia Piston si el destinatario coincide con nuestro Yape/WhatsApp.
+    const myPayDigits = String(process.env.MY_YAPE_NUMBER || '51930640071').replace(/\D/g, '').slice(-9);
+    const destText = String(parsed.receiver || parsed.phone || parsed.account || '').replace(/\D/g, '');
+    const directedToMe = !!destText && destText.includes(myPayDigits);
+    if (amount > 0 && !directedToMe) {
+        reasons.push('el destinatario detectado no es nuestro Yape/WhatsApp (' + myPayDigits + ')');
+    }
     // Regla dura: solo se aprueba si el monto detectado es EXACTAMENTE un precio de plan.
     const validPrices = Object.values(pricing.PLANS).map(p => p.price);
     if (amount > 0 && !validPrices.some(v => Math.abs(v - amount) < 0.01)) {
@@ -1103,11 +1110,9 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
 
     let reply;
     if (isOtherDestination) {
-        reply = [
-            'Analicé la imagen, pero no parece un pago de Piston Quarks.',
-            'Monto detectado: S/ ' + Number(amount).toFixed(2) + '. Nuestros planes son S/ 100, S/ 500 y S/ 700.',
-            'Si este comprobante era para otra persona o servicio, no lo registramos. Si pagas a Piston, envía la captura correcta.'
-        ].join('\n');
+        const desc = ocrTrigger.buildLiteralDescription(parsed);
+        try { ocrTrigger.saveDescription(remoteJid, desc); } catch (e) {}
+        reply = 'Analicé la imagen: ' + desc.replace(/^Descripción literal del comprobante:\n/, '') + '\n\n¿Quieres que te la describa con detalle? Responde SÍ.';
     } else {
         reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
     }
@@ -1267,6 +1272,18 @@ const server = http.createServer(async (req, res) => {
                 // Disparador OCR a demanda / pago: CAPTURA DE, PAGO DE, OCR A IMAGEN.
                 // Aplica desde CUALQUIER número, incluido el propio (fromMe).
                 const isImageNow = isImagePayload(payload);
+
+                // Si el usuario respondió SÍ a la pregunta de descripción, enviarla.
+                if (!isImageNow && ocrTrigger.isYes(msgText)) {
+                    const desc = ocrTrigger.takeDescription(remoteJid);
+                    if (desc) {
+                        await sendToWhatsApp(sessionId, remoteJid, desc);
+                        logEvent('info', 'ocr_description_sent', { sessionId, from: remoteJid });
+                        return;
+                    }
+                }
+
+
                 const ocrRequested = ocrTrigger.detect(msgText);
                 const armedState = ocrTrigger.get(remoteJid);
                 const textIntent = ocrTrigger.extractPlan(msgText);

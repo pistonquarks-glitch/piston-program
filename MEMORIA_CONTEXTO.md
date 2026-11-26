@@ -137,3 +137,9 @@ _Actualizado: 2026-11-23_
 ## Otro destino (2026-11-26)
 - Si el monto detectado no es un precio de plan (100/500/700), se clasifica como "otro_destino": probable transferencia a otra persona. Se informa al cliente que no parece pago de Piston, NO activa plan y NO alerta al supervisor.
 - Diferencia con "revision": revision es cuando faltan datos de un pago que si parece de Piston; otro_destino es cuando el monto claramente no es de ningun plan.
+
+
+## Descripcion literal bajo demanda (2026-11-26)
+- Al recibir una imagen se hace OCR primero en silencio. Si no parece pago hacia nuestro Yape/WhatsApp, se responde con lo detectado y se pregunta si quiere descripcion; si responde SI se envia descripcion literal: medio, remitente, destinatario, monto y operacion.
+- Si el destinatario coincide con MY_YAPE_NUMBER (default 51930640071) y el monto es de plan, se aprueba y activa plan automaticamente.
+- "Sotros destinos" se identifican cuando el destinatario no es nuestro numero; no activan plan ni alertan al supervisor.
