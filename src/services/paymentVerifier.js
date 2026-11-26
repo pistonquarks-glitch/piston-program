@@ -66,7 +66,7 @@ function parseReceipt(raw) {
   const labeled = tMoney.match(/(?:monto|total|importe|abono|envio|enviado|paga(?:ste|do)?|pagado)\s*[:\-=]?\s*(?:s\/?\.?\s*|soles?\s*|pen\s*|us\$?\s*|\$\s*)?([\d][\d,]*(?:\.\d{1,2})?)/i);
   if (labeled) amount = cleanNum(labeled[1]);
   if (amount == null) {
-    const bare = tMoney.match(/s\/?\.?\s*([\d][\d,]*(?:\.\d{1,2})?)/i);
+    const bare = tMoney.match(/s\/?\.?\s*([\d][\d,]*(?:\.\d{1,2})?)(?!\s*-\s*(?:yape|plin))/i);
     if (bare) amount = cleanNum(bare[1]);
   }
   if (amount == null) {
@@ -75,13 +75,23 @@ function parseReceipt(raw) {
   }
   // Comprobantes Plin/Yape: el OCR a veces deja solo el numero (ej. "200" = S/ 2.00).
   if (amount == null) {
-    const bareNum = t.match(/(?:^|\n)\s*([\d]{1,4}(?:\.\d{1,2})?)\s*(?:\r?\n|$)/m);
-    if (bareNum) {
-      const v = cleanNum(bareNum[1]);
-      if (v > 0) amount = v > 100 ? v / 100 : v;
+    const lines = String(t).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    for (const ln of lines) {
+      if (/-\s*(?:yape|plin)/i.test(ln)) continue; // numero de cuenta enmascarado
+      const m = ln.match(/^([\d]{1,4}(?:\.\d{1,2})?)$/);
+      if (!m) continue;
+      const v = cleanNum(m[1]);
+      if (v > 0) { amount = v > 100 ? v / 100 : v; break; }
     }
   }
   if (amount === 0) amount = null;
+  // Si el OCR tomo un numero de cuenta (ej. 225) como monto, preferir un
+  // valor que sea precio de plan (100/500/700) presente en el texto.
+  const planVals = [100, 500, 700];
+  const allNums = (String(t).match(/\b(?:100|500|700)\b/g) || []).map(Number);
+  if (allNums.length && (!planVals.includes(amount) || amount === 225)) {
+    amount = allNums[allNums.length - 1];
+  }
   // OCR suele perder el punto decimal (S/ 189.00 -> S/ 189000). Montos de
   // comprobantes de Piston Quarks son <= S/ 20,000; si parece centavos, normalizar.
   // Normalización OCR: números como "S/ 189000" significan S/ 189.00.
@@ -117,8 +127,12 @@ function parseReceipt(raw) {
     || pick(new RegExp('(?:enviado\\s+a|para|destinatario|beneficiario)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), t);
 
   // Remitente / de quien / enviado por
-  const sender = pick(new RegExp('(?:te\\s+yapeo|te\\s+yapeó|te\\s+pago|te\\s+pagó|enviado\\s+por|de|desde|remitente|origen)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), original)
-    || pick(new RegExp('(?:te\\s+yapeo|te\\s+pago|enviado\\s+por|desde|remitente|origen)\\s*[:\\-–]?\\s*(' + NAME + ')' + STOP, 'i'), t);
+  // Yape/Plin: el remitente suele ir solo, sin etiqueta "De:". Buscar nombre
+  // en la linea despues de "Yapeaste!/Plineaste!" o antes de "- Yape/- Plin".
+  const sender = pick(new RegExp('(?:te\\s+yapeo|te\\s+pago|enviado\\s+por|de|desde|remitente|origen)\\s*[:\\-]?\\s*(' + NAME + ')' + STOP, 'i'), original)
+    || pick(new RegExp('(?:yapeaste|plineaste|pago\\s+exitoso|transferencia)\\s*!?\\s*\\r?\\n\\s*(' + NAME + ')' + STOP, 'i'), original)
+    || pick(new RegExp('(' + NAME + ')\\s*\\r?\\n\\s*[.\\- ]*\\d+\\s*-\\s*(?:Yape|Plin)', 'i'), original)
+    || pick(new RegExp('(?:te\\s+yapeo|te\\s+pago|enviado\\s+por|desde|remitente|origen)\\s*[:\\-]?\\s*(' + NAME + ')' + STOP, 'i'), t);
 
   // Teléfono/celular destino o asociado (Perú: 9 dígitos, a veces con máscara)
   const phone = pick(/(?:celular|telefono|tel\.?|numero|número|destino)\s*[:\-–]?\s*(\+?51[\s\-]?\d{3}[\s\-]?\d{3}[\s\-]?\d{3}|\d{3}[\s\-\*]{1,3}\d{3}[\s\-\*]{0,3}\d{0,3}|\d{9})/i, t)

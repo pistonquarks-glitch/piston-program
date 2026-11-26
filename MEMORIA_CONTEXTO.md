@@ -143,3 +143,8 @@ _Actualizado: 2026-11-23_
 - Al recibir una imagen se hace OCR primero en silencio. Si no parece pago hacia nuestro Yape/WhatsApp, se responde con lo detectado y se pregunta si quiere descripcion; si responde SI se envia descripcion literal: medio, remitente, destinatario, monto y operacion.
 - Si el destinatario coincide con MY_YAPE_NUMBER (default 51930640071) y el monto es de plan, se aprueba y activa plan automaticamente.
 - "Sotros destinos" se identifican cuando el destinatario no es nuestro numero; no activan plan ni alertan al supervisor.
+
+
+## Remitente Yape/Plin (2026-11-26)
+- Los comprobantes Yape/Plin ponen el nombre del remitente sin etiqueta "De:". Se agrego extraccion del nombre tras "Yapeaste/Plineaste" o antes de "- Yape/- Plin" (ej. "Isaias Rojas").
+- Se evita confundir el numero de cuenta enmascarado (ej. 225) con el monto, priorizando precios de plan (100/500/700).
