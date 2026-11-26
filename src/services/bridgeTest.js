@@ -30,6 +30,9 @@ const CLIENTS_ROOT = clientLaunchers.CLIENTS_ROOT;
 const clientSecurity = new ClientSecurity(DATA_DIR, CLIENTS_ROOT);
 const ocrTrigger = new OcrTrigger();
 const OCR_SCANS_FILE = path.join(DATA_DIR, 'ocr_scans.jsonl');
+const WHATSAPP_PAYMENTS_FILE = path.join(DATA_DIR, 'whatsapp_payments.jsonl');
+const SUPERVISOR_JID = '51928059006@c.us';
+const supervisorAlertAt = new Map();
 clientLaunchers.ensureExportScript();
 const USAGE_TENANT = process.env.USAGE_TENANT_ID || SESSION_SLUG || 'principal';
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.jsonl');
@@ -299,7 +302,7 @@ async function handlePaymentImage(sessionId, remoteJid, altIds, payload, opts = 
 
     const parsed = paymentVerifier.parseReceipt(ocr);
     const consistency = paymentVerifier.verifyReceiptConsistency(parsed);
-    const aiVerdict = await aiVerifyReceipt(ocr, parsed);
+    const aiVerdict = opts.decisionMode ? '' : await aiVerifyReceipt(ocr, parsed);
     const reply = scanMode ? ocrTrigger.buildReply(parsed, consistency) : paymentVerifier.buildReceiptReply(parsed, consistency, aiVerdict || null);
 
     const status = consistency.ok ? 'verificado' : 'revision';
@@ -345,9 +348,14 @@ async function handlePaymentImage(sessionId, remoteJid, altIds, payload, opts = 
         try { fs.unlinkSync(finalPath); } catch (e) { /* ignore */ }
         return;
     }
+    if (opts.decisionMode) {
+        // El aviso final lo envía finalizeWhatsappPayment; conservamos la imagen como evidencia.
+        logEvent('info', 'ocr_decision_mode_result', { sessionId, messageId, amount: parsed.amount, app: parsed.app });
+        return { parsed, consistency, record, ocr };
+    }
     await sendToWhatsApp(sessionId, remoteJid, reply);
     try { fs.unlinkSync(finalPath); } catch (e) { /* conservar copia si falla el borrado */ }
-    return;
+    return { parsed, consistency, record, ocr };
 }
 
 // Cargar estado persistido (keywords + prompt + provider/model) al arrancar el puente
@@ -932,6 +940,124 @@ async function alertHuman(sessionId, remoteJid, reason, userText, botText) {
     }
 }
 
+async function alertSupervisor(sessionId, rec) {
+    try {
+        const key = String(rec.jid || '');
+        const now = Date.now();
+        if (now - (supervisorAlertAt.get(key) || 0) < 2 * 60 * 1000) return false;
+        supervisorAlertAt.set(key, now);
+        const msg = [
+            'ALERTA DE PAGO — revisión humana.',
+            'Cliente: ' + (rec.client || rec.jid || 'desconocido') + ' (' + rec.jid + ')',
+            'Motivo declarado: ' + (rec.intentLabel || 'no indicado'),
+            'Monto detectado: ' + (rec.amount != null ? 'S/ ' + Number(rec.amount).toFixed(2) : 'no detectado'),
+            'Banco/app: ' + (rec.app || rec.method || 'no detectado'),
+            'Remitente: ' + (rec.sender || 'no detectado'),
+            'N° operación: ' + (rec.reference || 'no detectado'),
+            'Motivo de la alerta: ' + (rec.reason || 'datos no concluyentes'),
+            'Texto del cliente: ' + String(rec.text || '').slice(0, 250)
+        ].join('\n');
+        const result = await sendToWhatsApp(sessionId, SUPERVISOR_JID, msg);
+        logEvent(isSendOk(result) ? 'info' : 'warn', 'supervisor_payment_alert', { sessionId, jid: rec.jid, ok: isSendOk(result), reason: rec.reason });
+        return isSendOk(result);
+    } catch (e) {
+        logEvent('warn', 'supervisor_payment_alert_error', { error: String(e && e.message || e).slice(0, 200) });
+        return false;
+    }
+}
+
+// Aprueba o rechaza un pago recibido por WhatsApp y activa el plan automáticamente.
+async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrResult, state) {
+    const parsed = (ocrResult && ocrResult.parsed) || {};
+    const consistency = (ocrResult && ocrResult.consistency) || { ok: false, reasons: ['sin datos OCR'] };
+    const amount = parsed.amount;
+    const intent = (state && state.intent) || null;
+    const digits = String(remoteJid || '').replace(/\D/g, '');
+    const userLabel = (state && state.client) || digits;
+
+    const reasons = [];
+    if (amount == null || !(amount > 0)) reasons.push('no pude detectar el monto en la captura');
+    if (!parsed.app && !parsed.method) reasons.push('no detecté la app o el banco');
+    if (!parsed.reference && !parsed.successMarkers) reasons.push('sin número de operación ni marcador de pago confirmado');
+    for (const r of (consistency.reasons || [])) if (!reasons.includes(r)) reasons.push(r);
+
+    let planId = intent && intent.planId;
+    if (!planId && amount > 0) {
+        const sug = pricing.suggestPlanByAmount(amount);
+        if (sug && sug.exact) planId = sug.planId;
+    }
+    let expected = planId ? (pricing.PLANS[planId] || {}).price : null;
+    if (planId && amount > 0 && expected != null && Math.abs(amount - expected) > 0.5) {
+        reasons.push('el monto S/ ' + Number(amount).toFixed(2) + ' no coincide con ' + (pricing.PLANS[planId] || {}).label + ' (S/ ' + Number(expected).toFixed(2) + ')');
+    }
+    if (!planId) reasons.push('no pude identificar a qué plan corresponde el pago');
+
+    const approved = reasons.length === 0;
+    const needsReview = !approved && (amount == null || amount <= 0 || !parsed.app || !parsed.reference || !planId);
+    const reason = reasons.join('; ');
+
+    let assigned = null;
+    let orderId = null;
+    if (approved) {
+        try {
+            let user = salesStore.findUserByPhone(digits) || salesStore.findUserByEmail(String(remoteJid || '').replace(/@.*$/, '') + '@wa.local');
+            if (!user) {
+                user = salesStore.upsertUser({
+                    name: userLabel,
+                    email: digits + '@wa.local',
+                    phone: digits,
+                    business: (state && state.business) || '',
+                    source: 'whatsapp'
+                });
+            }
+            const q = pricing.quote(planId, 0);
+            const order = salesStore.createOrder({
+                userId: user.id, name: user.name || userLabel, email: user.email, phone: digits,
+                source: 'whatsapp', quote: q
+            });
+            orderId = order.id;
+            salesStore.updateOrder(order.id, {
+                status: 'aprobado',
+                proof: ocrResult && ocrResult.record ? { localPath: ocrResult.record.imagePath, ocr: parsed, mode: 'whatsapp_ocr' } : null,
+                reviewedBy: 'whatsapp_ocr',
+                reviewedAt: new Date().toISOString(),
+                reviewNotes: 'Auto-aprobado por OCR de WhatsApp. ' + (intent && intent.declared ? 'Motivo declarado por el cliente.' : 'Motivo inferido por monto.')
+            });
+            assigned = salesStore.assignPlan(user.id, {
+                planId,
+                planStatus: 'active',
+                numbers: 1,
+                planStartedAt: new Date().toISOString(),
+                planExpiresAt: planExpiry(planId),
+                assignedBy: 'whatsapp_ocr',
+                notes: 'Plan activado por pago validado vía WhatsApp.'
+            });
+            try { clientLaunchers.createClientFolder({ ...assigned, phone: digits, name: assigned.name || userLabel }); } catch (e) {}
+            auditAdmin('whatsapp_payment_approved', { jid: remoteJid, planId, amount, orderId, userId: user.id });
+        } catch (e) {
+            logEvent('error', 'whatsapp_payment_activate_error', { jid: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+        }
+    }
+
+    const rec = {
+        ts: new Date().toISOString(), jid: remoteJid, client: userLabel, text: String(text || '').slice(0, 600),
+        intentLabel: (intent && intent.label) || null, planId, expected, amount,
+        app: parsed.app || parsed.method || null, sender: parsed.sender || null, receiver: parsed.receiver || null,
+        reference: parsed.reference || null, reasons, status: approved ? 'aprobado' : (needsReview ? 'revision' : 'rechazado'),
+        orderId, assignedUserId: assigned && assigned.id, imagePath: ocrResult && ocrResult.record && ocrResult.record.imagePath
+    };
+    try { fs.appendFileSync(WHATSAPP_PAYMENTS_FILE, JSON.stringify(rec) + '\n', 'utf8'); } catch (e) {}
+    logEvent(approved ? 'info' : 'warn', 'whatsapp_payment_decision', { sessionId, from: remoteJid, status: rec.status, planId, amount, reasons });
+
+    if (!approved) {
+        await alertSupervisor(sessionId, { ...rec, reason });
+    }
+
+    const reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
+    await sendToWhatsApp(sessionId, remoteJid, reply);
+    return rec;
+}
+
 async function sendToWhatsApp(sessionId, chatId, message) {
     // Endpoint correcto de Open-WA: /api/sessions/{sessionId}/messages/send-text
     // Body requerido: { "chatId": "<numero>@c.us", "text": "..." }
@@ -1052,26 +1178,48 @@ const server = http.createServer(async (req, res) => {
                 console.log('Mensaje:', msgText);
                 logEvent('info', 'webhook_received', { sessionId, from: remoteJid, text: msgText, fromMe, event: data.event || data.type || null, ids: altIds.filter(Boolean).slice(0, 8) });
 
-                // Disparador OCR a demanda: "OCR A IMAGEN" activa escaneo de la imagen siguiente
-                // (o de la misma imagen si viene como caption). Aplica desde CUALQUIER número,
-                // incluido el propio (fromMe), sin exigir operador de pago autorizado.
+                // Disparador OCR a demanda / pago: CAPTURA DE, PAGO DE, OCR A IMAGEN.
+                // Aplica desde CUALQUIER número, incluido el propio (fromMe).
                 const ocrRequested = ocrTrigger.detect(msgText);
                 const isImageNow = isImagePayload(payload);
-                if (ocrRequested || (isImageNow && ocrTrigger.peek(remoteJid))) {
-                    if (isImageNow) {
-                        ocrTrigger.consume(remoteJid);
-                        try {
-                            await handlePaymentImage(sessionId, remoteJid, altIds, payload || {}, { forceOcr: true, scanMode: true });
-                        } catch (e) {
-                            logEvent('error', 'ocr_trigger_handler_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                const armedState = ocrTrigger.get(remoteJid);
+                const textIntent = ocrTrigger.extractPlan(msgText);
+
+                if (isImageNow && (ocrRequested || armedState)) {
+                    const state = ocrTrigger.consume(remoteJid) || {};
+                    const intent = textIntent || state.intent || null;
+                    await sendToWhatsApp(sessionId, remoteJid, ocrTrigger.buildProgressReply());
+                    try {
+                        const ocrResult = await handlePaymentImage(sessionId, remoteJid, altIds, payload || {}, {
+                            forceOcr: true, scanMode: true, decisionMode: true
+                        });
+                        if (ocrResult) {
+                            await finalizeWhatsappPayment(sessionId, remoteJid, altIds, msgText, ocrResult, {
+                                intent,
+                                client: (contactInfo && (contactInfo.name || contactInfo.pushname)) || String(remoteJid || '').replace(/@.*$/, ''),
+                                business: ''
+                            });
                         }
-                        console.log('[OCR] Imagen escaneada por disparador desde ' + remoteJid);
+                    } catch (e) {
+                        logEvent('error', 'ocr_trigger_handler_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                    }
+                    console.log('[PAGO/OCR] Captura procesada y decidida desde ' + remoteJid);
+                    return;
+                }
+
+                if (ocrRequested || armedState) {
+                    // Texto sin imagen: registrar motivo o pedirlo.
+                    const current = armedState || { intent: null };
+                    const intent = textIntent || current.intent || null;
+                    if (!intent) {
+                        ocrTrigger.arm(remoteJid, null);
+                        logEvent('info', 'payment_intent_asked', { sessionId, from: remoteJid, fromMe });
+                        await sendToWhatsApp(sessionId, remoteJid, ocrTrigger.buildAskIntentReply());
                         return;
                     }
-                    ocrTrigger.arm(remoteJid);
-                    logEvent('info', 'ocr_trigger_armed', { sessionId, from: remoteJid, fromMe });
-                    await sendToWhatsApp(sessionId, remoteJid, 'Modo OCR activado. Envía la imagen (captura Yape/Plin/banco) y te devuelvo banco, monto y remitente.');
-                    console.log('[OCR] Modo activado para ' + remoteJid);
+                    ocrTrigger.arm(remoteJid, intent);
+                    logEvent('info', 'payment_intent_registered', { sessionId, from: remoteJid, planId: intent.planId, declared: !!intent.declared });
+                    await sendToWhatsApp(sessionId, remoteJid, ocrTrigger.buildAskImageReply(intent));
                     return;
                 }
 

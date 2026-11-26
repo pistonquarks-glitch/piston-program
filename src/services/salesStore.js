@@ -39,6 +39,13 @@ class SalesStore {
     return this.data.users.find(u => normEmail(u.email) === e) || null;
   }
 
+  findUserByPhone(phone) {
+    const d = String(phone || '').replace(/\D/g, '');
+    if (d.length < 7) return null;
+    return this.data.users.find(u => String(u.phone || '').replace(/\D/g, '') === d)
+      || this.data.users.find(u => String(u.phone || '').replace(/\D/g, '').endsWith(d.slice(-9))) || null;
+  }
+
   upsertUser(input) {
     const email = normEmail(input.email);
     let user = this.findUserByEmail(email);

@@ -61,10 +61,12 @@ function parseReceipt(raw) {
     return Number.isFinite(n) ? n : 0;
   };
   let amount = null;
-  const labeled = t.match(/(?:monto|total|importe|abono|envio|enviado|paga(?:ste|do)?|pagado)\s*[:\-=]?\s*(?:s\/?\.?\s*|soles?\s*|pen\s*|us\$?\s*|\$\s*)?([\d][\d,]*(?:\.\d{1,2})?)/i);
+  // OCR confunde S/ con A/, 5/, Sl; normalizar esas variantes antes de buscar el monto.
+  const tMoney = t.replace(/[\u0000-\u001f]/g, ' ').replace(/[§§AAS5lI]\s*[\/\\]\s*/gi, 'S/ ').replace(/\bS\s*[\/\\]\s*/gi, 'S/ ');
+  const labeled = tMoney.match(/(?:monto|total|importe|abono|envio|enviado|paga(?:ste|do)?|pagado)\s*[:\-=]?\s*(?:s\/?\.?\s*|soles?\s*|pen\s*|us\$?\s*|\$\s*)?([\d][\d,]*(?:\.\d{1,2})?)/i);
   if (labeled) amount = cleanNum(labeled[1]);
   if (amount == null) {
-    const bare = t.match(/s\/?\.?\s*([\d][\d,]*(?:\.\d{1,2})?)/i);
+    const bare = tMoney.match(/s\/?\.?\s*([\d][\d,]*(?:\.\d{1,2})?)/i);
     if (bare) amount = cleanNum(bare[1]);
   }
   if (amount == null) {

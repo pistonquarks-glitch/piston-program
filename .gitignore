@@ -68,3 +68,7 @@ mobile/android/app/piston-release.keystore
 mobile/android/piston-release.keystore
 *.apk
 
+
+src/whatsapp_payments.jsonl
+src/ocr_scans.jsonl
+
