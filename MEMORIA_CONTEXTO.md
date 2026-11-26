@@ -101,3 +101,9 @@ _Actualizado: 2026-11-23_
 - Registro separado en `src/ocr_scans.jsonl` (modo `ocr_trigger`), no contamina `payments.jsonl`.
 - Parsing corregido: "Pata:" -> destinatario; montos compactos tipo "S/ 189000" -> S/189 cuando no hay punto decimal y cae en rango de planes.
 - Archivo: `src/services/ocrTrigger.js`. Prueba end-to-end OK: APP=Yape, AMOUNT=189, SENDER=Juan Perez, RECEIVER=Piston Quarks, REF=998877665.
+
+
+## Voz y API key Open-WA (2026-11-26)
+- Causa raíz de "el bot no responde": OPENWA_API_KEY estaba vacía -> todos los envíos daban 401. El bridge ahora lee la key de `C:\Users\USER\openwa-data\.api-key` automáticamente. Verificado: texto normal genera `action_sent` sin 401.
+- Notas de voz: `voiceTranscriber.js` + `transcribe_local.py` (faster-whisper tiny, CPU int8, gratis, español). El webhook detecta `ptt/audio`, descarga media, transcribe y procesa el texto por el flujo normal. OpenRouter solo como respaldo (requiere $0.50, por eso falla).
+- Prueba real con voz: "Hola, puedes responderme por favor." -> transcrito y respondido (`action_sent`).

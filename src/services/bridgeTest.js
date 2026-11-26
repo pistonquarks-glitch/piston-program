@@ -12,6 +12,7 @@ const { ProofStore } = require('./proofStore');
 const { ClientSecurity } = require('./clientSecurity');
 const clientLaunchers = require('./clientLaunchers');
 const { OcrTrigger } = require('./ocrTrigger');
+const { transcribeAudio } = require('./voiceTranscriber');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
 const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
@@ -19,7 +20,12 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const OPENWA_URL = 'http://127.0.0.1:2785';
 // API key del cliente Open-WA (usada en send-text y para descargar medios)
-const OPENWA_API_KEY = process.env.OPENWA_API_KEY || '';
+let OPENWA_API_KEY = process.env.OPENWA_API_KEY || '';
+if (!OPENWA_API_KEY) {
+    for (const kf of ['C:\\Users\\USER\\openwa-data\\.api-key', path.join(os.homedir(), 'openwa-data', '.api-key')]) {
+        try { const v = fs.readFileSync(kf, 'utf8').trim(); if (v) { OPENWA_API_KEY = v; break; } } catch (e) {}
+    }
+}
 const DATA_DIR = process.env.SESSION_DATA_DIR ? path.resolve(process.env.SESSION_DATA_DIR) : path.join(__dirname, '..');
 const SESSION_NAME = process.env.SESSION_NAME || 'Principal';
 const SESSION_SLUG = process.env.SESSION_SLUG || 'principal';
@@ -1162,7 +1168,7 @@ const server = http.createServer(async (req, res) => {
                 console.log('ðŸ“¥ Evento recibido de Open-WA');
                 
                 const payload = data.payload || data.data || data;
-                const msgText = payload?.body || payload?.text || payload?.content || payload?.message || data.body || data.text || data.message || '';
+                let msgText = payload?.body || payload?.text || payload?.content || payload?.message || data.body || data.text || data.message || '';
                 const sessionId = data.session || data.sessionId || payload?.session || payload?.sessionId || LAST_SESSION_ID || 'default';
                 LAST_SESSION_ID = sessionId;
                 const remoteJid = payload?.from || payload?.chatId || payload?.sender?.id || payload?.author || data.from || data.chatId || 'unknown';
@@ -1177,6 +1183,35 @@ const server = http.createServer(async (req, res) => {
                 console.log('De:', remoteJid);
                 console.log('Mensaje:', msgText);
                 logEvent('info', 'webhook_received', { sessionId, from: remoteJid, text: msgText, fromMe, event: data.event || data.type || null, ids: altIds.filter(Boolean).slice(0, 8) });
+
+                // Notas de voz: transcribir audio -> texto y procesar como mensaje normal.
+                const pType = String((payload && (payload.type || (payload._data && payload._data.type))) || '').toLowerCase();
+                const pMime = String((payload && (payload.mimetype || (payload.media && payload.media.mimetype) || (payload._data && payload._data.mimetype))) || '').toLowerCase();
+                const isVoice = pType === 'ptt' || pType === 'audio' || pType === 'voice' || /audio|ogg|opus|mp4|m4a|wav/.test(pMime);
+                if (isVoice) {
+                    const vMsgId = String(payload?.id || payload?.messageId || payload?._data?.id || '').trim();
+                    const vChatId = String(payload?.chatId || payload?.from || remoteJid || 'unknown');
+                    let vBuffer = null;
+                    const vMedia = (payload && payload.media) || (payload && payload._data && payload._data.media) || null;
+                    if (vMedia && typeof vMedia.data === 'string' && vMedia.data.length) {
+                        try { vBuffer = Buffer.from(vMedia.data, 'base64'); } catch (e) {}
+                    }
+                    if (!vBuffer && vMsgId) vBuffer = await downloadMediaBuffer(sessionId, vChatId, vMsgId);
+                    if (!vBuffer) {
+                        await sendToWhatsApp(sessionId, remoteJid, 'No pude descargar tu nota de voz. Intenta enviarla de nuevo.');
+                        return;
+                    }
+                    const tr = await transcribeAudio(vBuffer, pMime);
+                    if (!tr.ok) {
+                        logEvent('warn', 'voice_transcribe_failed', { sessionId, from: remoteJid, error: tr.error });
+                        await sendToWhatsApp(sessionId, remoteJid, 'No pude entender tu nota de voz. Escríbeme el mensaje en texto, por favor.');
+                        return;
+                    }
+                    msgText = tr.text;
+                    logEvent('info', 'voice_transcribed', { sessionId, from: remoteJid, text: String(msgText).slice(0, 300) });
+                    console.log('[VOZ] Transcrito: ' + String(msgText).slice(0, 200));
+                    // El texto transcrito continúa por el flujo normal (compuerta + IA).
+                }
 
                 // Disparador OCR a demanda / pago: CAPTURA DE, PAGO DE, OCR A IMAGEN.
                 // Aplica desde CUALQUIER número, incluido el propio (fromMe).
