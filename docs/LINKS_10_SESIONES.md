@@ -27,3 +27,11 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 - El panel muestra solo las secciones permitidas por el plan: instalación, árboles de lógica, cerebro IA y registro de pagos.
 - Temas de color: esmeralda, manzana y WhatsApp (selector en la cabecera del panel).
 - Descargas desde el panel: APK, EXE y ZIP en /public/download/:id.
+
+
+## Paneles por plan (2026-11-27)
+- Plan 1: https://wa.pistonquarks.store/panel-plan1 — resumen, 50 árboles de decisión, directivas, conversaciones (sin análisis) e instalación.
+- Plan 2: https://wa.pistonquarks.store/panel-plan2 — ventas dirigidas, pagos recibidos, análisis de conversaciones (selección múltiple) e instalación. 1000 mensajes/mes no acumulables.
+- Plan 3: https://wa.pistonquarks.store/panel-plan3 — ingresos y egresos con gráficas, integraciones Excel/CSV y Sheets, CRM S/50 y CRM S/70 e instalación.
+- Vinculación sin cámara: código de 8 dígitos de Open-WA en /public/pairing-code/:slug; el QR sigue disponible como opción 2.
+- La landing pública ya no muestra las 10 sesiones ni los puertos; todo queda preinstalado.

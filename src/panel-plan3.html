@@ -1,0 +1,115 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piston Bot · Plan 3 · Registros y gráficas</title><link rel="icon" href="/admin/icon-192.png"><style>
+:root{--bg:#061a16;--card:#0e332c;--line:rgba(80,200,152,.22);--text:#eafff6;--muted:#9fd8c2;--accent:#50c878;--wa:#25D366}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#061a16,#0a2a24 45%,#061a16);min-height:100vh}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 14px 50px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px;flex-wrap:wrap}
+.brand{font-weight:900;letter-spacing:.06em}.brand span{color:var(--accent)}.nav a{color:var(--muted);text-decoration:none;font-size:12px;margin-left:12px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 12px}.sub{color:var(--muted);font-size:12px;margin:0 0 16px}
+.card{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tabs button{background:rgba(255,255,255,.03);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700}
+.tabs button.active{background:linear-gradient(135deg,var(--accent),#2f9e68);color:#041a13;border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.stat{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:14px}.stat .k{font-size:11px;color:var(--muted)}.stat .v{font-size:22px;font-weight:800;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:12px;display:block;overflow-x:auto}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--muted);font-size:10px;text-transform:uppercase}
+.btn{display:inline-block;background:linear-gradient(135deg,var(--accent),#2f9e68);color:#041a13;padding:9px 14px;border-radius:9px;text-decoration:none;font-weight:800;font-size:12px;border:0;cursor:pointer;margin:3px 4px 3px 0}
+.btn.ghost{background:rgba(255,255,255,.04);color:var(--text);border:1px solid var(--line)}
+input,select{background:#0b2420;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:inherit;font-size:12px;margin:3px 4px 3px 0}
+.chat-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:7px;cursor:pointer}
+.chat-item .t{font-weight:800;font-size:13px}.chat-item .n{font-size:11px;color:var(--muted);margin-top:2px}.chat-item .p{font-size:12px;color:var(--muted);margin-top:5px;white-space:normal}
+.msg{border-radius:10px;padding:8px 10px;margin:6px 0;max-width:78%;font-size:12px;white-space:normal}.msg.bot{background:rgba(37,211,102,.14);margin-left:auto}.msg.user{background:rgba(255,255,255,.05)}
+.qr{display:block;width:230px;max-width:100%;margin:12px auto;padding:10px;background:#fff;border-radius:12px}
+.small{font-size:11px;color:var(--muted);line-height:1.6}.pill{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#b7ffd0;font-size:11px}
+.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--accent)}
+@media(max-width:640px){.grid{grid-template-columns:1fr}.wrap{padding:14px 10px 40px}}
+</style></head><body>
+<div class="wrap">
+<nav class="nav"><div class="brand">PISTON <span>BOT</span></div><div><a href="/piston-bot">Producto</a><a href="/mi-panel">Mi panel completo</a></div></nav>
+<h1>Plan 3 · Registros y gráficas</h1><p class="sub">Ingresos y egresos, integraciones con Excel/Sheets y CRM con gráficas.</p>
+<div id="login" class="card" style="display:none"><h2>Acceso a tu panel</h2><p class="small">Ingresa el correo y el código que recibiste al confirmar tu pago.</p>
+<form onsubmit="event.preventDefault();location.href='/panel-plan3?email='+encodeURIComponent(document.getElementById('le').value)+'&code='+encodeURIComponent(document.getElementById('lc').value);">
+<input id="le" type="email" placeholder="tu@correo.com" required><input id="lc" placeholder="Código de acceso" required><button class="btn" type="submit">Entrar</button></form></div>
+<div id="app" style="display:none"><p class="sub">Plan activo: <span id="planName" class="pill">-</span></p><div class="tabs" id="tabs"></div><div id="content"></div></div>
+</div><script>
+const Q = new URLSearchParams(location.search);
+const EMAIL = Q.get('email') || '', CODE = Q.get('code') || '';
+const $ = (id) => document.getElementById(id);
+const esc = (s='') => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const qs = () => 'email='+encodeURIComponent(EMAIL)+'&code='+encodeURIComponent(CODE);
+let BOOT = null, CURRENT = null;
+async function api(path, opts={}){ try{ const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}}); return await r.json(); }catch(e){ return {ok:false,error:'sin_conexion'}; } }
+function loginForm(){ $('login').style.display='block'; $('app').style.display='none'; }
+function fmtPhone(n){ const d=String(n||'').replace(/\D/g,''); if(!d) return ''; const local=d.startsWith('51')&&d.length>9?d.slice(2):d; return '+51 '+local.replace(/(\d{3})(?=\d)/g,'$1 '); }
+function contactTitle(c){ return String((c&&(c.title||c.name||c.pushname))||'').trim() || fmtPhone(c&&c.number) || 'Contacto'; }
+function contactNumber(c){ const d=String((c&&c.number)||'').replace(/\D/g,''); return d ? fmtPhone(d) : ''; }
+
+async function installSection(){
+  const s = BOOT.session || {};
+  return `<div class="card"><h2>Instalación y configuración</h2>
+  <p class="small">Tu bot ya viene preinstalado en el puerto <b>${esc(s.port||'')}</b>. Solo pon tus datos, vincula tu WhatsApp y queda listo.</p>
+  <div class="grid" style="margin:12px 0">
+    <div class="stat"><div class="k">Sesión</div><div class="v" style="font-size:14px">${esc(s.name||'Piston Bot')}</div></div>
+    <div class="stat"><div class="k">Puerto reservado</div><div class="v">${esc(s.port||'')}</div></div>
+  </div>
+  <p class="small"><b>Opción 1 · sin cámara:</b> escribe tu número y te damos un código de 8 caracteres. En WhatsApp entra a Dispositivos vinculados → Vincular con número de teléfono y escríbelo.</p>
+  <div><input id="pairPhone" placeholder="519xxxxxxxx" maxlength="15"><button class="btn" onclick="getPairCode()">Obtener código</button></div>
+  <p class="small" id="pairResult"></p>
+  <p class="small"><b>Opción 2 · QR:</b> abre este enlace en la PC y escanéalo con la cámara del celular.</p>
+  <p><a class="btn ghost" id="qrLink" href="#" target="_blank" rel="noopener">Abrir mi QR</a><a class="btn ghost" href="${esc(BOOT.links.activateWa)}" target="_blank" rel="noopener">Activar mi bot</a></p>
+  <img class="qr" id="qrImg" alt="QR de WhatsApp">
+  <p class="small"><b>Descargas:</b> ${(BOOT.downloads||[]).map(d=>`<a class="btn ghost" href="${esc(d.url)}">${esc(d.label)}</a>`).join('')}</p>
+  </div>`;
+}
+async function initInstall(){
+  const qr = $('qrImg'); if(qr && BOOT.links.qrData){ try{ const d=await api(BOOT.links.qrData); if(d.dataUrl) qr.src=d.dataUrl; }catch(e){} }
+  const a = $('qrLink'); if(a) a.href = BOOT.links.setup;
+}
+async function getPairCode(){
+  const phone = ($('pairPhone')||{}).value || '';
+  const r = await api('/public/pairing-code/'+encodeURIComponent(BOOT.session.slug), {method:'POST',body:JSON.stringify({phone})});
+  $('pairResult').textContent = r.ok ? ('Tu código es: '+r.code+' — escríbelo en WhatsApp antes de 2 minutos.') : ('No se pudo generar: '+(r.error||'intenta de nuevo'));
+}
+function renderTables(rows, cols){
+  if(!rows.length) return '<p class="small">Sin registros.</p>';
+  return '<table><thead><tr>'+cols.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>'<td>'+esc(c[0](r))+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+}
+
+
+const SECTIONS = {
+ ingresos:{label:'Ingresos y egresos', render:async()=>{
+   const d=await api('/public/plan/analytics?'+qs());
+   if(!d.ok){ $('content').innerHTML='<div class="card"><h2>Ingresos y egresos</h2><p class="small">'+esc(d.error||'')+'</p></div>'; return; }
+   const max=Math.max(1,...Object.values(d.byDay||{}));
+   const bars=Object.entries(d.byDay||{}).map(([k,v])=>`<div style="margin:8px 0"><div class="small">${esc(k)} · S/ ${v}</div><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join('');
+   $('content').innerHTML=`<div class="grid"><div class="stat"><div class="k">Pagos aprobados</div><div class="v">${d.approved||0}</div></div><div class="stat"><div class="k">Ingresos</div><div class="v">S/ ${d.total||0}</div></div><div class="stat"><div class="k">Egresos</div><div class="v">S/ ${d.egresos||0}</div></div></div><div class="card"><h2>Gráfica de ingresos por día</h2>${bars||'<p class="small">Sin datos.</p>'}<p class="small">${esc(d.note||'')}</p></div>`;
+ }},
+ integraciones:{label:'Integraciones', render:async()=>{
+   const d=await api('/public/plan/integrations?'+qs());
+   const rows=(d.integrations||[]).map(i=>`<div class="chat-item"><div class="t">${esc(i.label)}</div><div class="n"><span class="pill">${esc(i.status)}</span></div><div class="p">${i.url?'<a class="btn ghost" href="'+esc(i.url)+'">Descargar Excel/CSV</a>':''}${i.wa?'<a class="btn ghost" href="'+esc(i.wa)+'" target="_blank" rel="noopener">Consultar por WhatsApp</a>':''}</div></div>`).join('');
+   $('content').innerHTML='<div class="card"><h2>Integraciones</h2><p class="small">Excel/CSV y Google Sheets listos para exportar tus pagos.</p>'+(rows||'<p class="small">Sin integraciones.</p>')+'</div>';
+ }},
+ crm:{label:'CRM y gráficas', render:async()=>{
+   $('content').innerHTML=`<div class="card"><h2>CRM con gráficas · S/50 al mes</h2><p class="small">Clientes, etapas y gráficas comerciales. Se añade a este plan por separado.</p><a class="btn" href="https://wa.me/51930640071?text=${encodeURIComponent('Quiero añadir CRM con gráficas (S/50) a mi Piston Bot')}" target="_blank" rel="noopener">Contratar CRM S/50</a></div>
+   <div class="card"><h2>CRM avanzado · S/70 al mes</h2><p class="small">Disponible también para cualquier otro plan. Consulta directamente por WhatsApp.</p><a class="btn ghost" href="https://wa.me/51930640071?text=${encodeURIComponent('Quiero añadir CRM avanzado (S/70) a mi plan Piston Bot')}" target="_blank" rel="noopener">Consultar CRM S/70</a></div>`;
+ }},
+ instalacion:{label:'Instalación', render:async()=>{ $('content').innerHTML=await installSection(); await initInstall(); }}
+};
+
+
+async function boot(){
+  const first = Object.keys(SECTIONS)[0];
+  if(!EMAIL || !CODE){ loginForm(); return; }
+  BOOT = await api('/public/plan/bootstrap?'+qs()+'&plan=3');
+  if(!BOOT.ok){ loginForm(); return; }
+  $('login').style.display='none'; $('app').style.display='block';
+  $('planName').textContent = (BOOT.plan&&BOOT.plan.label)||'Plan 3';
+  const tabs=Object.entries(SECTIONS).map(([k,v],i)=>`<button data-k="${k}" class="${i===0?'active':''}">${esc(v.label)}</button>`).join('');
+  $('tabs').innerHTML=tabs;
+  document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); CURRENT=b.dataset.k; SECTIONS[CURRENT].render();
+  }));
+  CURRENT=first; SECTIONS[first].render();
+}
+boot();
+</script></body></html>

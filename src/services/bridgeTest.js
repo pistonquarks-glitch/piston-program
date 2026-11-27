@@ -976,6 +976,59 @@ async function looksLikeReceiptImage(payload, sessionId, remoteJid, altIds) {
     } catch (e) { return false; }
 }
 
+// ===helpers paneles por plan===
+function waRequest(path, method='GET', body=null, timeout=12000) {
+    const data = body ? JSON.stringify(body) : null;
+    return new Promise((resolve) => {
+        const req = http.request(`${OPENWA_URL}${path}`, {
+            method,
+            headers: { 'X-API-Key': OPENWA_API_KEY, 'Content-Type': 'application/json', ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}) }
+        }, (res) => {
+            let b = ''; res.on('data', c => b += c);
+            res.on('end', () => { try { resolve({ status: res.statusCode, data: JSON.parse(b || 'null') }); } catch (e) { resolve({ status: res.statusCode, data: null }); } });
+        });
+        req.on('error', () => resolve({ status: 0, data: null }));
+        req.setTimeout(timeout, () => { req.destroy(); resolve({ status: 0, data: null }); });
+        if (data) req.write(data);
+        req.end();
+    });
+}
+
+function panelNumberForPlan(planId) {
+    if (planId === 'automatizadas' || planId === 'subscription' || planId === 'annual' || planId === 'lifetime') return 1;
+    if (planId === 'cerebro_sin_ocr' || planId === 'cerebro_ocr') return 2;
+    if (planId === 'reportes_graficos' || planId === 'crm' || planId === 'app_web' || planId === 'app_fisico') return 3;
+    return 1;
+}
+
+function planPanelUrl(planId, user) {
+    const n = panelNumberForPlan(planId);
+    let url = PUBLIC_BASE + '/panel-plan' + n;
+    if (user && user.email && user.accessCode) url += '?email=' + encodeURIComponent(user.email) + '&code=' + encodeURIComponent(user.accessCode);
+    return url;
+}
+
+async function chatsWithContactNames(limit) {
+    const rows = summarizeChats(limit);
+    const r = await waRequest('/api/sessions/' + encodeURIComponent(LAST_SESSION_ID || '') + '/contacts', 'GET', null, 9000);
+    const byNumber = new Map();
+    if (r.status === 200 && Array.isArray(r.data)) {
+        for (const c of r.data) {
+            const num = String(c.number || String(c.id || '').replace(/@.*$/, '')).replace(/\D/g, '');
+            const nm = String(c.name || c.pushName || c.pushname || '').trim();
+            if (num && nm && !byNumber.has(num)) byNumber.set(num, nm);
+        }
+    }
+    for (const row of rows) {
+        const num = String(row.number || '').replace(/\D/g, '');
+        const nm = byNumber.get(num);
+        if (nm) { row.name = nm; row.pushname = nm; }
+        row.title = String(row.name || row.pushname || '').trim() || String(row.number || '').replace(/\D/g, '') || 'Contacto';
+        row.subtitle = String(row.name || row.pushname || '').trim() ? String(row.number || '') : '';
+    }
+    return rows;
+}
+
 // === Paneles por cliente/plan (Piston Bot) ===
 const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || 'https://wa.pistonquarks.store';
 const PANEL_TABS_BY_PLAN = {
@@ -1045,6 +1098,8 @@ function bootstrapForUser(user) {
         session: { slug, port: slot ? slot.port : PORT, name: slot ? slot.name : SESSION_NAME },
         links: {
             panel: PUBLIC_BASE + '/mi-panel',
+            planPanel: planPanelUrl(user.planId, user),
+            planNumber: panelNumberForPlan(user.planId),
             setup: PUBLIC_BASE + '/public/setup/' + encodeURIComponent(slug),
             qrData: PUBLIC_BASE + '/public/qr-data/' + encodeURIComponent(slug),
             activateWa: 'https://wa.me/51930640071?text=' + encodeURIComponent('ACTIVAR MI BOT - ' + (user.phone || user.email)),
@@ -1097,7 +1152,7 @@ function setupPageHtml(slot) {
     const port = Number(slot.port || 0);
     const slug = String(slot.slug || '');
     const jid = String(slot.jid || '');
-    const localPanel = 'http://127.0.0.1:' + port + '/admin';
+    const panelUrl = '/mi-panel';
     const apiQr = '/public/qr-data/' + encodeURIComponent(slug);
     return [
         '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
@@ -1111,24 +1166,31 @@ function setupPageHtml(slot) {
         '.brand img{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#d8ffe9,#50c878)}',
         '.brand h1{font-size:18px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}',
         '.card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.25)}',
-        'h2{font-size:18px;margin:0 0 12px}.small{font-size:12px;color:var(--muted)}',
+        'h2{font-size:18px;margin:0 0 12px}.small{font-size:12px;color:var(--muted);line-height:1.6}',
         '.qr{display:block;width:260px;max-width:100%;margin:16px auto;padding:10px;background:#fff;border-radius:14px}',
-        'ol{line-height:1.8}.btn{display:inline-block;background:linear-gradient(135deg,var(--gold),#2f9e68);color:#041a13;padding:10px 15px;border-radius:10px;text-decoration:none;font-weight:800}',
+        'ol{line-height:1.8}.btn{display:inline-block;background:linear-gradient(135deg,var(--gold),#2f9e68);color:#041a13;padding:10px 15px;border-radius:10px;text-decoration:none;font-weight:800;border:0;cursor:pointer}',
+        '.ghost{background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--line)}',
+        'input{background:#0b2420;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;font-size:12px}',
         '.slot{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(141,182,0,.14);border:1px solid rgba(141,182,0,.35);color:#d9ff9b;font-size:11px}',
-        '.qrstate{text-align:center;font-size:11px;color:var(--muted);margin-top:-6px}',
+        '.qrstate{text-align:center;font-size:11px;color:var(--muted);margin-top:-6px}.code{font-size:26px;font-weight:900;letter-spacing:.18em;color:#b7ffd0;text-align:center;margin:10px 0}',
         '</style></head><body><div class="wrap">',
         '<div class="brand"><img src="/admin/icon-192.png" alt="Piston Quarks"><div><h1>Piston Bot · ' + name + '</h1><p>Configuración automatizada de WhatsApp</p></div></div>',
         '<div class="card"><span class="slot">PUERTO ' + port + ' · ' + slug + '</span>',
-        '<h2>Escanea para vincular tu WhatsApp</h2>',
-        '<p class="small">El QR se actualiza solo cada 20 segundos. Si WhatsApp lo旋转, esta página muestra el vigente automáticamente.</p>',
+        '<h2>Vincula tu WhatsApp sin instalar nada</h2>',
+        '<p class="small">Todo está preconfigurado. Solo elige un método: código de 8 dígitos (sin cámara) o QR.</p>',
+        '<h3 style="font-size:14px;margin-top:18px">Opción 1 · código, sin cámara</h3>',
+        '<p class="small">En WhatsApp entra a <b>Dispositivos vinculados</b> → <b>Vincular con número de teléfono</b>. Escribe tu número aquí y te daremos el código.</p>',
+        '<input id="phone" placeholder="519xxxxxxxx" maxlength="15"><button class="btn" onclick="getCode()">Obtener código</button>',
+        '<div id="codeBox" class="code" style="display:none"></div><p class="small" id="codeMsg"></p>',
+        '<h3 style="font-size:14px;margin-top:18px">Opción 2 · QR</h3>',
+        '<p class="small">Abre esta página en la PC y escanea el QR con la cámara del celular. El QR se renueva solo.</p>',
         '<img id="qrImg" class="qr" src="/public/session-qr/' + encodeURIComponent(jid) + '" alt="QR de WhatsApp">',
         '<div id="qrState" class="qrstate">Cargando QR...</div>',
-        '<ol><li>Abre WhatsApp en tu celular.</li><li>Entra a <b>Dispositivos vinculados</b> → <b>Vincular dispositivo</b>.</li><li>Escanea este código QR.</li><li>Listo: tu bot queda operando en línea desde el servidor.</li></ol>',
-        '<p class="small">Nivel profesional: alta, pago, verificación, asignación de ranura y entrega de enlace son automáticos.</p>',
-        '<p><a class="btn" href="' + localPanel + '" target="_blank" rel="noopener">Abrir panel local (' + port + ')</a></p>',
+        '<p><a class="btn ghost" href="' + panelUrl + '" target="_blank" rel="noopener">Abrir mi panel</a></p>',
         '<script>',
-        '(function(){var api=' + JSON.stringify(apiQr) + ';var img=document.getElementById("qrImg");var st=document.getElementById("qrState");',
-        'async function refresh(){try{var r=await fetch(api+"?t="+Date.now(),{cache:"no-store"});var d=await r.json();if(d&&d.dataUrl){img.src=d.dataUrl;st.textContent=d.stale?"Última copia · reintentando":"QR vigente · "+(d.age||0)+" s";}else{st.textContent="Reintentando...";}}catch(e){st.textContent="Sin conexión · última copia";}}refresh();setInterval(refresh,15000);})();',
+        '(function(){var api=' + JSON.stringify(apiQr) + ';var slug=' + JSON.stringify(slug) + ';var img=document.getElementById("qrImg");var st=document.getElementById("qrState");',
+        'async function refresh(){try{var r=await fetch(api+"?t="+Date.now(),{cache:"no-store"});var d=await r.json();if(d&&d.dataUrl){img.src=d.dataUrl;st.textContent=d.stale?"Ultima copia, reintentando":"QR vigente "+(d.age||0)+" s";}else{st.textContent="Reintentando...";}}catch(e){st.textContent="Sin conexion, ultima copia";}}refresh();setInterval(refresh,15000);',
+        'window.getCode=async function(){var ph=(document.getElementById("phone").value||"").replace(/\\D/g,"");var m=document.getElementById("codeMsg");if(ph.length<8){m.textContent="Numero invalido";return;}m.textContent="Generando...";try{var r=await fetch("/public/pairing-code/"+encodeURIComponent(slug),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:ph})});var d=await r.json();if(d.ok){document.getElementById("codeBox").textContent=d.code;document.getElementById("codeBox").style.display="block";m.textContent="Escribe este codigo en WhatsApp dentro de los proximos 2 minutos.";}else{m.textContent="No se pudo: "+(d.error||"intenta de nuevo");}}catch(e){m.textContent="Sin conexion";}};})();',
         '</script></div></div></body></html>'
     ].join('');
 }
@@ -1429,8 +1491,8 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
                     const uCode = assigned && assigned.accessCode;
                     const planForTabs = (assigned && assigned.planId) || planId || orderId;
                     const firstTab = (tabsForPlan(planForTabs)[0] || {}).id || 'instalacion';
-                    let panelLink = PUBLIC_BASE + '/mi-panel';
-                    if (uEmail && uCode) panelLink += '?email=' + encodeURIComponent(uEmail) + '&code=' + encodeURIComponent(uCode) + '&panel=' + encodeURIComponent(firstTab);
+                    let panelLink = planPanelUrl(planForTabs, { email: uEmail, accessCode: uCode });
+                    if (!uEmail || !uCode) panelLink = PUBLIC_BASE + '/mi-panel';
                     reply += '\n\nListo: tu plan quedo activo y tu puente ' + target.port + ' reservado.';
                     reply += '\n1) Abre tu panel segun tu pago: ' + panelLink;
                     reply += '\n2) Activa tu bot escribiendo ACTIVAR MI BOT.';
@@ -2417,6 +2479,14 @@ const server = http.createServer(async (req, res) => {
         const out = { ...d, age: d.ts ? Math.round((Date.now() - d.ts) / 1000) : 0 };
         sendJson(res, out.ok ? 200 : 404, out);
         return;
+    } else if (/^\/panel-plan[123]$/.test(pathname) && req.method === 'GET') {
+        const n = pathname.slice(-1);
+        try {
+            const p = path.join(__dirname, '..', 'panel-plan' + n + '.html');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+            fs.createReadStream(p).pipe(res);
+        } catch (e) { sendJson(res, 404, { ok: false, error: 'panel_no_disponible' }); }
+        return;
     } else if ((pathname === '/piston-bot' || pathname === '/piston-bot.html' || pathname === '/') && req.method === 'GET') {
         serveStaticFromMobile(res, 'piston-bot.html');
         return;
@@ -2466,6 +2536,117 @@ const server = http.createServer(async (req, res) => {
         if (!fs.existsSync(f)) { sendJson(res, 404, { ok: false, error: 'archivo_no_disponible' }); return; }
         res.writeHead(200, { 'Content-Type': d.mime, 'Content-Disposition': 'attachment; filename="' + d.file + '"' });
         fs.createReadStream(f).pipe(res);
+        return;
+    } else if (/^\/public\/pairing-code\/([^/]+)$/.test(pathname) && req.method === 'POST') {
+        const slug = decodeURIComponent(pathname.split('/')[3]);
+        const item = readSessionsRegistry().find(x => x.slug === slug) || readSessionsRegistry().find(x => Number(x.port) === Number(PORT));
+        if (!item) { sendJson(res, 404, { ok: false, error: 'sesion_no_encontrada' }); return; }
+        try {
+            const b = JSON.parse(await readBody(req));
+            const phone = String(b.phone || '').replace(/\D/g, '');
+            if (phone.length < 8) { sendJson(res, 400, { ok: false, error: 'numero_invalido' }); return; }
+            const out = await waRequest('/api/sessions/' + encodeURIComponent(item.waSession) + '/pairing-code', 'POST', { phoneNumber: phone }, 45000);
+            if (out.status >= 200 && out.status < 300 && out.data && out.data.pairingCode) {
+                sendJson(res, 200, { ok: true, code: out.data.pairingCode, status: out.data.status, slug: item.slug });
+            } else {
+                sendJson(res, 400, { ok: false, error: 'codigo_no_disponible', detail: out.status, body: out.data });
+            }
+        } catch (e) { sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
+        return;
+    } else if (pathname === '/public/plan/bootstrap' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        const queryPlan = new URL(req.url, 'http://localhost').searchParams.get('plan');
+        const n = panelNumberForPlan(user.planId);
+        const b = bootstrapForUser(user);
+        sendJson(res, 200, { ...b, planNumber: n, planPanel: planPanelUrl(user.planId, user), requestedPlan: parseInt(queryPlan, 10) || n });
+        return;
+    } else if (pathname === '/public/plan/chats' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        const q = new URL(req.url, 'http://localhost');
+        const limit = Math.min(300, Math.max(1, parseInt(q.get('limit'), 10) || 120));
+        sendJson(res, 200, { ok: true, chats: await chatsWithContactNames(limit) });
+        return;
+    } else if (pathname === '/public/plan/chat' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        const q = new URL(req.url, 'http://localhost');
+        const jid = String(q.get('jid') || '');
+        const limit = Math.min(500, Math.max(1, parseInt(q.get('limit'), 10) || 120));
+        const state = readChatState()[jid] || {};
+        const rows = await chatsWithContactNames(300);
+        const meta = rows.find(x => x.jid === jid) || {};
+        sendJson(res, 200, { ok: true, jid, events: chatEvents(jid, limit), state, meta });
+        return;
+    } else if (pathname === '/public/plan/analyze' && req.method === 'POST') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (panelNumberForPlan(user.planId) < 2) { sendJson(res, 403, { ok: false, error: 'plan_sin_analisis' }); return; }
+        try {
+            const b = JSON.parse(await readBody(req));
+            const jids = Array.isArray(b.jids) ? b.jids.slice(0, 8) : [];
+            if (!jids.length) { sendJson(res, 400, { ok: false, error: 'sin_conversaciones' }); return; }
+            const parts = [];
+            for (const jid of jids) {
+                const meta = (await chatsWithContactNames(300)).find(x => x.jid === jid) || {};
+                const evs = chatEvents(jid, 60);
+                const lines = evs.slice(-30).map(e => (e.from === 'bot' || e.author === 'bot' ? 'BOT: ' : 'CLIENTE: ') + String(e.text || e.reply || '').slice(0, 200));
+                parts.push('Contacto: ' + (meta.title || meta.number || jid) + '\n' + lines.join('\n'));
+            }
+            const sys = 'Eres analista de conversaciones de Piston Bot. Analiza las conversaciones dadas y responde en español, máximo 12 líneas, con: etapa del cliente, intención, objeciones, señales de compra y próxima acción recomendada. No inventes datos.';
+            const out = await callAssistantAI(sys, parts.join('\n\n---\n\n'));
+            sendJson(res, 200, { ok: true, analysis: String(out || '').slice(0, 2000), conversations: jids.length });
+        } catch (e) { sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
+        return;
+    } else if (pathname === '/public/plan/directives' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        let directives = [];
+        try { directives = JSON.parse(fs.readFileSync(DIRECTIVES_FILE, 'utf8')) || []; } catch (e) {}
+        sendJson(res, 200, { ok: true, directives: Array.isArray(directives) ? directives : (directives.directives || []) });
+        return;
+    } else if (pathname === '/public/plan/sales' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        sendJson(res, 200, { ok: true, orders: salesStore.findOrdersByEmail(user.email).map(o => ({ orderId: o.id, status: o.status, planId: o.planId, total: o.quote && o.quote.total, totalLabel: o.quote && o.quote.totalLabel, createdAt: o.createdAt, reviewedAt: o.reviewedAt })) });
+        return;
+    } else if (pathname === '/public/plan/analytics' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (panelNumberForPlan(user.planId) < 3) { sendJson(res, 403, { ok: false, error: 'plan_sin_graficas' }); return; }
+        const pay = paymentsForUser(user);
+        const byDay = {};
+        let approved = 0, total = 0;
+        for (const p of pay.payments) {
+            if (String(p.status).toLowerCase() === 'aprobado') {
+                approved++; total += Number(p.amount || 0);
+                const d = String(p.ts || '').slice(0, 10) || 'sin_fecha';
+                byDay[d] = (byDay[d] || 0) + Number(p.amount || 0);
+            }
+        }
+        sendJson(res, 200, { ok: true, approved, total, byDay, egresos: 0, note: 'Egresos se registran cuando se conecte la fuente contable.' });
+        return;
+    } else if (pathname === '/public/plan/export' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (panelNumberForPlan(user.planId) < 3) { sendJson(res, 403, { ok: false, error: 'plan_sin_exportacion' }); return; }
+        const pay = paymentsForUser(user);
+        const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+        const csv = ['fecha,estado,plan,monto,aplicacion,operacion', ...pay.payments.map(p => [p.ts, p.status, p.planId, p.amount, p.app, p.reference].map(esc).join(','))].join('\n');
+        res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="piston-bot-pagos.csv"' });
+        res.end(csv);
+        return;
+    } else if (pathname === '/public/plan/integrations' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (panelNumberForPlan(user.planId) < 3) { sendJson(res, 403, { ok: false, error: 'plan_sin_integraciones' }); return; }
+        sendJson(res, 200, { ok: true, integrations: [
+            { id: 'sheets', label: 'Google Sheets', status: process.env.GSHEETS_SYNC === '1' ? 'activo' : 'configurable', tabs: ['Logs', 'Payments', 'OCR_Scans', 'Dashboard'] },
+            { id: 'excel', label: 'Excel / CSV', status: 'listo', url: PUBLIC_BASE + '/public/plan/export?email=' + encodeURIComponent(user.email) + '&code=' + encodeURIComponent(user.accessCode) },
+            { id: 'crm50', label: 'CRM con gráficas (S/50 mes)', status: 'disponible', wa: 'https://wa.me/51930640071?text=' + encodeURIComponent('Quiero añadir CRM con gráficas (S/50) a mi plan Piston Bot') },
+            { id: 'crm70', label: 'CRM avanzado (S/70 mes)', status: 'disponible', wa: 'https://wa.me/51930640071?text=' + encodeURIComponent('Quiero añadir CRM avanzado (S/70) a mi plan Piston Bot') }
+        ] });
         return;
     } else if (/^\/public\/session-qr\/[^/]+$/.test(pathname) && req.method === 'GET') {
         const id = decodeURIComponent(pathname.split('/')[3]);

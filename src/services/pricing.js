@@ -43,7 +43,7 @@ const PLANS = {
     durationMonths: 1,
     promoMinimumMonths: 6,
     tokensPerMonth: 2000000,
-    messagesPerMonth: 2500,
+    messagesPerMonth: 1000, nonCumulative: true,
     includedNumbers: 1,
     extraNumberDiscount: 0.10,
     features: [
@@ -64,7 +64,7 @@ const PLANS = {
     durationMonths: 1,
     promoMinimumMonths: 6,
     tokensPerMonth: 3000000,
-    messagesPerMonth: 5000,
+    messagesPerMonth: 1000, nonCumulative: true,
     includedNumbers: 1,
     extraNumberDiscount: 0.10,
     features: [
@@ -224,6 +224,7 @@ function catalog() {
       promoMinimumMonths: p.promoMinimumMonths || null,
       tokensPerMonth: p.tokensPerMonth,
       messagesPerMonth: p.messagesPerMonth,
+      nonCumulative: !!p.nonCumulative,
       includedNumbers: p.includedNumbers,
       extraNumberDiscount: p.extraNumberDiscount,
       features: p.features

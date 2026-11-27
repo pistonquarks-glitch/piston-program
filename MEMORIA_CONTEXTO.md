@@ -214,3 +214,12 @@ _Actualizado: 2026-11-23_
 - Landing piston-bot.html con 5 botones wa.me por producto y enlace "Mi panel".
 - Rutas públicas nuevas: /piston-bot, /mi-panel, /public/client/bootstrap|trees|payments|brain, /public/download/:id.
 - Tras pago aprobado el bot envía enlace al panel del plan, QR y ACTIVAR MI BOT.
+
+
+## Tres paneles por plan y vinculacion sin camara (2026-11-27)
+- Creados src/panel-plan1.html, panel-plan2.html y panel-plan3.html; rutas /panel-plan1..3.
+- Plan 1: arboles, directivas, conversaciones sin analisis, instalacion. Plan 2: ventas, pagos, analisis con seleccion multiple. Plan 3: graficas de ingresos/egresos, Excel/Sheets, CRM S/50 y S/70.
+- Eliminados de la vista publica las 10 sesiones, los puertos y "Ver sesiones activas".
+- Anadido /public/pairing-code/:slug usando POST /api/sessions/:id/pairing-code de Open-WA: el cliente escribe un codigo de 8 digitos en WhatsApp y no necesita escanear.
+- Panel principal sin proveedor/modelo ni bloque Sesion/Bridge; contactos con nombre y un solo numero debajo, sincronizados desde /api/sessions/:id/contacts.
+- Planes cerebro: 1000 mensajes/mes, no acumulables.
