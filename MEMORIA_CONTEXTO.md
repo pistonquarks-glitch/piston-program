@@ -176,3 +176,11 @@ _Actualizado: 2026-11-23_
 - Panel: vista de respuestas del bot clasificadas por etapa, rangos 1h/24h/7d/30d, picos por minuto y hora, contador de tokens, botones Árboles y Cuenta.
 - Micrófono INKA BOT: Vosk pequeño se desactiva por defecto; modo Windows dictar (Ctrl+H) enfoca el campo y Enter envía.
 - Web comprar.html actualizada con promo, porcentajes, aviso de los 20 y addons.
+
+
+## Dashboard limpio y tema verde (2026-11-27)
+- Quitados Actividad reciente y Gate/Compuerta del dashboard, con sus funciones JS.
+- Tema verde esmeralda/manzana en panel, Mi Cuenta y PWA; burbujas estilo WhatsApp (entrada blanca, salida verde claro).
+- Contactos: nombre guardado solo; numero solo si no hay nombre; sin JID en lista ni en burbujas; sin contador de turnos.
+- Agregado acceso directo a WhatsApp automatizado (PWA) en el dashboard.
+- Arboles de logica verificados: 50 por cliente, flujo horizontal gatillo→atencion→interes→deseo→accion.
