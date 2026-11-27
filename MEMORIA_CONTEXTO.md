@@ -198,3 +198,10 @@ _Actualizado: 2026-11-23_
 - Tras pago aprobado se asigna ranura libre y se envía enlace público por WhatsApp.
 - Links en docs/LINKS_10_SESIONES.md.
 - Nota: Docker/Open-WA quedó con engine 503 tras iniciar 10 motores; QR sirve última copia hasta restaurar.
+
+
+## Activacion diferida de sesiones (2026-11-27)
+- Las 10 sesiones quedan creadas pero apagadas. El pago aprobado solo reserva ranura, no enciende motores.
+- Comando WhatsApp "activar mi bot" / "iniciar mi sesion" enciende SOLO el puente asignado al numero y entrega su QR.
+- Esto evita saturar WSL/Docker: no se arrancan 10 motores WhatsApp a la vez.
+- Causa del error Docker WSL unresponsive: 10 motores OpenWA simultaneous agotaron memoria/WSL. Se apagaron, se hizo wsl --shutdown y Docker volvio healthy.

@@ -1312,10 +1312,10 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
                 const items = readSessionsRegistry();
                 const target = items.find(x => x.slug === slot.slug);
                 if (target) {
-                    target.assignedTo = { userId: assigned && assigned.id, orderId, email: userLabel, ts: new Date().toISOString() };
+                    target.assignedTo = { userId: assigned && assigned.id, orderId, email: userLabel, jid: remoteJid, ts: new Date().toISOString() };
                     writeSessionsRegistry(items);
                     const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(target.slug);
-                    reply += '\n\nConfigura tu WhatsApp aqui: ' + link;
+                    reply += '\n\nTu puente quedo reservado en el puerto ' + target.port + '. Cuando quieras activarlo escribe ACTIVAR MI BOT.\nQR: ' + link;
                     logEvent('info', 'session_slot_assigned', { slug: target.slug, port: target.port, orderId });
                 }
             }
@@ -1482,20 +1482,41 @@ const server = http.createServer(async (req, res) => {
                     // El texto transcrito continúa por el flujo normal (compuerta + IA).
                 }
 
-                // Solicitud de nueva sesión de WhatsApp desde el propio chat.
-                if (/^(nueva\s+sesi[oó]n|nuevo\s+n[uú]mero|crear\s+sesi[oó]n|conectar\s+otro\s+whatsapp)\b/i.test(msgText)) {
-                    logEvent('info', 'session_link_requested', { sessionId, from: remoteJid });
-                    await sendToWhatsApp(sessionId, remoteJid, 'Creando sesión nueva… te envío el QR en un momento.');
+                // Activación diferida: el agente de WhatsApp pide abrir SOLO su puente.
+                if (/^(activar\s+(mi\s+)?(puente|sesi[oó]n|bot)|iniciar\s+(mi\s+)?(puente|sesi[oó]n|bot)|conectar\s+(mi\s+)?whatsapp|abrir\s+(mi\s+)?sesi[oó]n)\b/i.test(msgText)) {
+                    logEvent('info', 'lazy_session_requested', { sessionId, from: remoteJid });
+                    await sendToWhatsApp(sessionId, remoteJid, 'Activando tu puente. Solo se abrirá tu sesión, no las demás.');
                     try {
-                        const out = await createOpenwaSession('Piston-' + String(remoteJid).replace(/\D/g, '').slice(-6));
-                        if (out.ok) {
-                            await sendToWhatsApp(sessionId, remoteJid, 'Escanea este QR con tu otro WhatsApp:\n' + out.publicUrl);
-                        } else {
-                            await sendToWhatsApp(sessionId, remoteJid, 'No pude generar el QR. Intenta de nuevo en unos segundos.');
+                        const items = readSessionsRegistry();
+                        let item = items.find(x => x.assignedTo && String((x.assignedTo.jid || x.assignedTo.email || '')).replace(/\D/g, '') === String(remoteJid).replace(/\D/g, ''));
+                        if (!item) item = nextFreeSlot();
+                        if (!item) {
+                            await sendToWhatsApp(sessionId, remoteJid, 'No hay un puente asignado todavía. Confirma tu pago primero.');
+                            return;
                         }
+                        if (!item.assignedTo) {
+                            item.assignedTo = { jid: remoteJid, ts: new Date().toISOString() };
+                            writeSessionsRegistry(items);
+                        }
+                        const st = sessionRuntimeStatus(item);
+                        if (!st.running) {
+                            const projectRoot = path.join(__dirname, '..', '..');
+                            const env = { ...process.env, PORT: String(item.port), SESSION_DATA_DIR: item.dataDir,
+                                SESSION_NAME: item.name, SESSION_SLUG: item.slug,
+                                OPENWA_URL: item.waUrl || process.env.OPENWA_URL || '',
+                                OPENWA_SESSION: item.waSession || process.env.OPENWA_SESSION || '' };
+                            const child = spawn(process.execPath, [path.join(projectRoot, 'src', 'services', 'bridgeTest.js')], { cwd: projectRoot, env, detached: true, stdio: 'ignore', windowsHide: true });
+                            child.unref();
+                            item.pid = child.pid; item.status = 'running'; item.startedAt = new Date().toISOString();
+                            writeSessionsRegistry(items);
+                            auditAdmin('lazy_session_start', { slug: item.slug, port: item.port, pid: item.pid, from: remoteJid });
+                        }
+                        const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(item.slug);
+                        await sendToWhatsApp(sessionId, remoteJid, 'Tu puente ' + item.port + ' está activo. Abre tu QR para escanear:\n' + link);
+                        logEvent('info', 'lazy_session_ready', { slug: item.slug, port: item.port, from: remoteJid });
                     } catch (e) {
-                        logEvent('error', 'session_link_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
-                        await sendToWhatsApp(sessionId, remoteJid, 'No pude generar el QR. Intenta de nuevo.');
+                        logEvent('error', 'lazy_session_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                        await sendToWhatsApp(sessionId, remoteJid, 'No pude activar tu puente. Intenta de nuevo.');
                     }
                     return;
                 }
