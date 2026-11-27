@@ -53,24 +53,36 @@ a{color:var(--accent)}
   </details>
 
   <h2>Elige tu plan</h2>
-  <p class="lead">Todos los planes incluyen 1 número WhatsApp y panel propio. Cada número adicional tiene <b>10% de descuento fijo</b>.</p>
+  <p class="lead"><b>Black Friday · solo hoy y solo 20 primeros.</b> Precios con descuento; después vuelven los precios regulares. Cada número adicional tiene 10% de descuento fijo.</p>
+  <div class="promo" style="margin-bottom:16px;padding:14px;border:1px solid rgba(242,182,50,.35);border-radius:14px;background:rgba(242,182,50,.08)">
+    <strong>Si no entras entre los 20 primeros, pagas:</strong> automatizadas S/100, cerebro sin OCR S/400, cerebro con OCR S/600, reportes S/600 y CRM S/100. Aprovecha ahora.
+  </div>
 
   <div class="cards" id="planCards">
-    <div class="plan" data-plan="subscription">
-      <div class="tag">Recurrente</div><div class="name">Suscripción mensual</div>
-      <div class="price">S/ 100<small>/mes</small></div>
-      <ul><li>1,000,000 tokens/mes</li><li>1,000 mensajes bot/mes</li><li>1 número incluido</li><li>Sin OCR ni extras</li></ul>
+    <div class="plan" data-plan="automatizadas">
+      <div class="tag">BLACK FRIDAY · 85% DTO.</div><div class="name">Respuestas Automatizadas</div>
+      <div class="price">S/ 15<small>/mes</small></div>
+      <div class="small muted">Antes S/100 · después S/100</div>
+      <ul><li>Flujo por gatillos</li><li>1 número WhatsApp</li><li>Panel y directivas</li><li>Sin OCR</li></ul>
     </div>
-    <div class="plan" data-plan="app_web">
-      <div class="tag">Pago único · 6 meses</div><div class="name">APP/Alquiler por web</div>
-      <div class="price">S/ 500<small>/6 meses</small></div>
-      <ul><li>5,000,000 tokens/mes</li><li>5,000 mensajes bot/mes</li><li>1 número incluido</li><li>Se instala en tu PC</li></ul>
+    <div class="plan" data-plan="cerebro_sin_ocr">
+      <div class="tag">BLACK FRIDAY · 87.5% DTO.</div><div class="name">Cerebro IA sin OCR</div>
+      <div class="price">S/ 50<small>/mes</small></div>
+      <div class="small muted">Antes S/400 · mínimo 6 meses para mantener</div>
+      <ul><li>IA personalizada</li><li>50 árboles de lógica gratis</li><li>Panel, directivas, programados</li><li>Sin lector de comprobantes</li></ul>
     </div>
-    <div class="plan" data-plan="app_fisico">
-      <div class="tag">Pago único · 6 meses</div><div class="name">APP/Alquiler físico</div>
-      <div class="price">S/ 700<small>/6 meses</small></div>
-      <ul><li>5,000,000 tokens/mes</li><li>5,000 mensajes bot/mes</li><li>1 número incluido</li><li>Adquirido presencialmente</li></ul>
+    <div class="plan" data-plan="cerebro_ocr">
+      <div class="tag">BLACK FRIDAY · 80% DTO.</div><div class="name">Cerebro IA + OCR y reportes</div>
+      <div class="price">S/ 120<small>/mes</small></div>
+      <div class="small muted">Antes S/600 · mínimo 6 meses</div>
+      <ul><li>Todo el cerebro sin OCR</li><li>OCR Yape/Plin/banco</li><li>Reportes entrantes/salientes</li><li>Dashboard de pagos</li></ul>
     </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h2>Agregados Black Friday</h2>
+    <label class="small"><input type="checkbox" id="addReportes" style="width:auto"> Reportes con gráficos entrantes/salientes — <b>S/50</b> (antes S/600, 91.7% dto.)</label>
+    <label class="small"><input type="checkbox" id="addCrm" style="width:auto"> CRM de clientes — <b>S/70</b> (antes S/100, 30% dto.)</label>
   </div>
 
   <div class="grid">
@@ -166,8 +178,8 @@ $('orderForm').addEventListener('submit', async e=>{
   try{
     const orderBody={
       name:$('name').value.trim(), email:$('email').value.trim(), phone:$('phone').value.trim(),
-      business:$('business').value.trim(), source:selectedPlan==='app_fisico'?'fisico':'web',
-      planId:selectedPlan, extraNumbers:parseInt($('extra').value,10)
+      business:$('business').value.trim(), source:'web',
+      planId:selectedPlan, extraNumbers:parseInt($('extra').value,10), addons:[...document.querySelectorAll('input[type=checkbox]:checked')].map(x=>x.id==='addReportes'?'reportes_graficos':x.id==='addCrm'?'crm':'').filter(Boolean)
     };
     const r1=await fetch(API+'/public/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(orderBody)});
     const d1=await r1.json();

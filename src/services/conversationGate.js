@@ -327,6 +327,8 @@ function updateContact(jid, info = {}) {
  * @param {string} input.text         Texto entrante
  * @param {boolean} [input.isSupport] Número de soporte / interno
  * @param {boolean} [input.quotedToBot] El mensaje cita/responda a un mensaje del bot
+ * @param {boolean} [input.isPrivate] Solo conversaciones privadas (no grupos/estados/canales)
+ * @param {boolean} [input.isAuthorized] Remitente autorizado (dueño o cliente con plan)
  * @param {boolean} [input.forceStrong] Payload explícito (calculadora, página)
  * @param {string} [input.actionId] Acción comercial detectada en el manual
  * @param {boolean} [input.actionOpensNewChat] La acción detectada puede abrir un chat nuevo/frío
@@ -339,11 +341,16 @@ function evaluate(input) {
   const isSupport = !!(input && input.isSupport);
   const quotedToBot = !!(input && input.quotedToBot);
   const forceStrong = !!(input && input.forceStrong);
+  const isPrivate = input && input.isPrivate !== false;
+  const isAuthorized = !!(input && input.isAuthorized);
   const actionId = String((input && input.actionId) || '');
   const now = Date.now();
 
   if (isSupport) {
     return { respond: true, reason: 'support_number', mode: 'bot' };
+  }
+  if (!isPrivate) {
+    return { respond: false, reason: 'private_only', strong: false, weak: false };
   }
   if (!jid) {
     return { respond: false, reason: 'no_jid' };
@@ -419,12 +426,12 @@ function evaluate(input) {
       scheduleSave();
       return { respond: true, reason: 'quoted_to_bot_new_chat', mode: 'bot', strong, weak };
     }
+    scheduleSave();
     if (greeting) {
       st.greeted = true;
       scheduleSave();
       return { respond: true, reason: 'greeting_new_chat', mode: 'bot', strong, weak };
     }
-    scheduleSave();
     return { respond: false, reason: 'new_chat_no_trigger', strong, weak };
   }
 
@@ -454,7 +461,6 @@ function evaluate(input) {
     scheduleSave();
     return { respond: true, reason: 'greeting_reopen', mode: 'bot', strong, weak };
   }
-
   scheduleSave();
   return { respond: false, reason: 'no_trigger', strong, weak };
 }

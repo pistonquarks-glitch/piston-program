@@ -168,3 +168,11 @@ _Actualizado: 2026-11-23_
 - PWA app: manifest.webmanifest, sw.js, iconos 192/512 y registro de service worker en todas las paginas. Vista local http://127.0.0.1:8090 (python http.server en mobile/www).
 - Mismo paquete PWA copiado a la landing original auto wasap/AUTENFICACION Y PAGOS.
 - APK recompilado desde mobile/www (no hizo falta apktool: el codigo fuente Capacitor ya existe): dist/PistonBot-Android.apk 7.71 MB firmado, SHA256 3C06BED760A6507292EEE2916393FA508FA490DD69CB30EE0DB31C6B201DC31C.
+
+
+## Black Friday 2026-11-27 y árboles (2026-11-27)
+- Promo solo hoy y 20 primeros: automatizadas S/15 (antes 100, 85%), cerebro sin OCR S/50 (antes 400, 87.5%), cerebro con OCR S/120 (antes 600, 80%), addon reportes gráficos S/50 (antes 600, 91.7%), CRM S/70 (antes 100, 30%). Después vuelven precios regulares.
+- 50 árboles de lógica gratis por cliente, generados en logicTrees.js con flujo horizontal gatillo → atención → interés → deseo → acción, preguntas guía y brújula.
+- Panel: vista de respuestas del bot clasificadas por etapa, rangos 1h/24h/7d/30d, picos por minuto y hora, contador de tokens, botones Árboles y Cuenta.
+- Micrófono INKA BOT: Vosk pequeño se desactiva por defecto; modo Windows dictar (Ctrl+H) enfoca el campo y Enter envía.
+- Web comprar.html actualizada con promo, porcentajes, aviso de los 20 y addons.

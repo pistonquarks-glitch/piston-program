@@ -13,6 +13,7 @@ const { ClientSecurity } = require('./clientSecurity');
 const clientLaunchers = require('./clientLaunchers');
 const { OcrTrigger } = require('./ocrTrigger');
 const { transcribeAudio } = require('./voiceTranscriber');
+const logicTrees = require('./logicTrees');
 
 const PORT = parseInt(process.env.PORT || '2013', 10);
 const ADMIN_BIND = process.env.ADMIN_BIND || '127.0.0.1';
@@ -2052,7 +2053,7 @@ const server = http.createServer(async (req, res) => {
     } else if (pathname === '/public/quote' && req.method === 'POST') {
         try {
             const b = JSON.parse(await readBody(req));
-            const q = pricing.quote(b.planId, b.extraNumbers);
+            const q = pricing.quote(b.planId, b.extraNumbers, b.addons);
             if (!q) { sendJson(res, 400, { ok: false, error: 'plan_invalido' }); return; }
             sendJson(res, 200, { ok: true, quote: q });
         } catch (e) { sendJson(res, 400, { ok: false, error: 'json_invalido' }); }
@@ -2067,7 +2068,7 @@ const server = http.createServer(async (req, res) => {
                 sendJson(res, 400, { ok: false, error: 'datos_incompletos', detail: 'Nombre, correo válido y celular son obligatorios.' });
                 return;
             }
-            const q = pricing.quote(b.planId, b.extraNumbers);
+            const q = pricing.quote(b.planId, b.extraNumbers, b.addons);
             if (!q) { sendJson(res, 400, { ok: false, error: 'plan_invalido' }); return; }
             const user = salesStore.upsertUser({ name, email, phone, business: b.business, source: b.source || 'web' });
             const order = salesStore.createOrder({ userId: user.id, name, email, phone, source: b.source || 'web', quote: q });
@@ -2163,6 +2164,61 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
             res.end(fs.readFileSync(p, 'utf8'));
         } catch (e) { res.writeHead(404); res.end('No disponible'); }
+        return;
+    } else if (pathname === '/admin/logic-trees/generate' && req.method === 'POST') {
+        try {
+            const b = JSON.parse(await readBody(req));
+            const clientId = String(b.clientId || 'sin_cliente');
+            const count = Math.min(50, parseInt(b.count, 10) || 50);
+            const gen = logicTrees.generate(clientId, count);
+            auditAdmin('logic_trees_generated', { clientId, ...gen });
+            sendJson(res, 200, { ok: true, ...gen, trees: logicTrees.list(clientId).slice(0, 3) });
+        } catch (e) { sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
+        return;
+    } else if (pathname === '/admin/logic-trees' && req.method === 'GET') {
+        const u = new URL(req.url, 'http://localhost');
+        const clientId = String(u.searchParams.get('clientId') || 'sin_cliente');
+        const trees = logicTrees.list(clientId);
+        sendJson(res, 200, { ok: true, total: trees.length, trees });
+        return;
+    } else if (pathname === '/admin/dashboard-responses' && req.method === 'GET') {
+        const u = new URL(req.url, 'http://localhost');
+        const range = String(u.searchParams.get('range') || '24h');
+        const now = Date.now();
+        const windows = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
+        const span = windows[range] || windows['24h'];
+        let events = [];
+        try {
+            events = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
+        } catch (e) {}
+        const replies = events.filter(e => (e.msg === 'ai_sent' || e.msg === 'action_sent' || e.msg === 'panel_send') && (e.reply || e.text) && Date.parse(e.ts) >= now - span);
+        const byProduct = {};
+        const byMinute = {}, byHour = {}, byDay = {}, byWeek = {};
+        for (const r of replies) {
+            const text = String(r.reply || r.text || '');
+            const prod = logicTrees.classifyStage(text);
+            byProduct[prod] = (byProduct[prod] || 0) + 1;
+            const d = new Date(r.ts);
+            const mk = d.toISOString().slice(0, 16);
+            const hk = d.toISOString().slice(0, 13);
+            const dk = d.toISOString().slice(0, 10);
+            const wk = dk;
+            byMinute[mk] = (byMinute[mk] || 0) + 1;
+            byHour[hk] = (byHour[hk] || 0) + 1;
+            byDay[dk] = (byDay[dk] || 0) + 1;
+            byWeek[wk] = (byWeek[wk] || 0) + 1;
+        }
+        const peak = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1])[0] || null;
+        sendJson(res, 200, {
+            ok: true,
+            range,
+            total: replies.length,
+            tokens: salesStore.listUsage().reduce((s, u) => s + (u.tokens || 0), 0),
+            byProduct,
+            byMinute, byHour, byDay, byWeek,
+            peaks: { minute: peak(byMinute), hour: peak(byHour), day: peak(byDay), week: peak(byWeek) },
+            replies: replies.slice(-40).reverse().map(r => ({ ts: r.ts, type: r.msg, text: String(r.reply || r.text || '').slice(0, 300) }))
+        });
         return;
     } else if (pathname === '/admin/analytics' && req.method === 'GET') {
         let rows = [];
