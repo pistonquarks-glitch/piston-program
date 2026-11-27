@@ -154,3 +154,9 @@ _Actualizado: 2026-11-23_
 - sendToWhatsApp ahora envia Buffer.from(payload,'utf8') con Content-Type application/json; charset=utf-8 y Content-Length, para que tildes, enie y signos de interrogacion lleguen bien a WhatsApp.
 - Los signos ? vistos en la consola de PowerShell son solo display; los bytes reales tienen 0xf3 (o), etc. Verificado en la API de Open-WA.
 - Configuracion de dos mensajes para otro destino en src/otro_destino_config.json.
+
+
+## Dashboard Sheets y continuidad (2026-11-27)
+- Google Sheets (1JgygSw4k59YiiCc93ACIO02hCdWjvoGPmv4N5UFZP7M): pestañas Logs, Payments, OCR_Scans, Dashboard. Service account verificado. Se escribe TODO OCR en OCR_Scans y solo aprobados en Payments.
+- Dashboard local en panel: seccion Ingresos / Escaneos con /admin/analytics (totales, por plan, ultimos escaneos) y link a la hoja.
+- Compuerta: comando STOP desactiva continuidad; authorship lastReplyAuthor (bot/humano/panel); continuidad 6 h solo para clientes con plan activo; humano desde fromMe con texto distinto marca takeover 6 h.

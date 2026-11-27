@@ -198,7 +198,11 @@ function getChat(jid) {
     isBusiness: false,
     aiSuspected: false,
     aiSuspectedReason: '',
-    aiSuspectedAt: 0
+    aiSuspectedAt: 0,
+    lastReplyAuthor: 'none',
+    lastReplyAt: 0,
+    continuityUntil: 0,
+    continuityReason: ''
   };
   if (!chats[key]) {
     chats[key] = { ...defaults };
@@ -253,6 +257,10 @@ function markHumanTakeover(jid) {
   st.mode = 'human';
   st.lastHumanAt = now;
   st.lastSeenAt = now;
+  st.lastReplyAuthor = 'humano';
+  st.lastReplyAt = now;
+  st.continuityUntil = 0;
+  st.continuityReason = 'human_takeover';
   scheduleSave();
   return st;
 }
@@ -264,6 +272,8 @@ function markBotReply(jid, text) {
   st.mode = 'bot';
   st.lastBotAt = now;
   st.lastSeenAt = now;
+  st.lastReplyAuthor = 'bot';
+  st.lastReplyAt = now;
   st.turns = (st.turns || 0) + 1;
   if (text) {
     st.lastBotText = norm(text);
@@ -343,6 +353,15 @@ function evaluate(input) {
   }
 
   const st = getChat(jid);
+
+  // Comando de salida: desactiva la continuidad y fuerza silencio hasta nuevo gatillo.
+  if (/^(stop|pausa|detente|basta|gracias por ahora)\b/i.test(text)) {
+    st.lastBotAt = 0;
+    st.turns = 0;
+    st.greeted = false;
+    scheduleSave();
+    return { respond: false, reason: 'stop_command', strong: false, weak: false };
+  }
 
   // Dedupe: el mismo texto en menos de 8 s (reintentos de Open-WA, doble envío).
   if (st.lastText === text && now - (st.lastTextAt || 0) < DEDUPE_MS) {

@@ -345,13 +345,6 @@ async function handlePaymentImage(sessionId, remoteJid, altIds, payload, opts = 
     } else {
         savePaymentRecord(record);
     }
-    if (process.env.GSHEETS_SYNC === '1') {
-        try {
-            require('./gsheetsLogger').appendPaymentRow(record)
-                .then(() => logEvent('info', 'payment_gsheets_ok', { sessionId, messageId }))
-                .catch(e => logEvent('error', 'payment_gsheets_error', { sessionId, messageId, error: String((e && e.message) || e).slice(0, 300) }));
-        } catch (e) { logEvent('error', 'payment_gsheets_error', { sessionId, messageId, error: String((e && e.message) || e).slice(0, 300) }); }
-    }
     logEvent('info', status === 'verificado' ? 'payment_verified' : 'payment_needs_review', { sessionId, from: remoteJid, messageId, amount: parsed.amount, method: parsed.method, score: consistency.score });
 
     if (process.env.PAYMENTS_DRY_RUN === '1') {
@@ -1104,6 +1097,16 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
         orderId, assignedUserId: assigned && assigned.id, imagePath: ocrResult && ocrResult.record && ocrResult.record.imagePath
     };
     try { fs.appendFileSync(WHATSAPP_PAYMENTS_FILE, JSON.stringify(rec) + '\n', 'utf8'); } catch (e) {}
+    if (process.env.GSHEETS_SYNC === '1') {
+        try {
+            const gl = require('./gsheetsLogger');
+            gl.ensureTabs()
+                .then(() => gl.appendScanRow(rec))
+                .then(() => approved ? gl.appendPaymentRow(rec) : null)
+                .then(() => logEvent('info', 'payment_gsheets_ok', { sessionId, status: rec.status, amount }))
+                .catch(e => logEvent('error', 'payment_gsheets_error', { sessionId, error: String((e && e.message) || e).slice(0, 300) }));
+        } catch (e) { logEvent('error', 'payment_gsheets_error', { sessionId, error: String((e && e.message) || e).slice(0, 300) }); }
+    }
     logEvent(approved ? 'info' : 'warn', 'whatsapp_payment_decision', { sessionId, from: remoteJid, status: rec.status, planId, amount, reasons });
 
     if (!approved && !isOtherDestination) {
@@ -1492,6 +1495,14 @@ const server = http.createServer(async (req, res) => {
                     actionId: actionCandidate ? actionCandidate.id : '',
                     actionOpensNewChat: !!(actionCandidate && actionCandidate.opensNewChat === true)
                 });
+                // Continuidad solo para clientes con plan activo (o numero de soporte).
+                if (gateDecision.respond && gateDecision.reason === 'bot_continuation' && !fromSupport) {
+                    const cu = salesStore.findUserByPhone(String(remoteJid).replace(/\D/g, ''));
+                    if (!cu || cu.planStatus !== 'active') {
+                        gateDecision.respond = false;
+                        gateDecision.reason = 'continuation_not_authorized';
+                    }
+                }
                 logEvent('info', 'gate_decision', {
                     sessionId,
                     from: remoteJid,
@@ -2152,6 +2163,30 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
             res.end(fs.readFileSync(p, 'utf8'));
         } catch (e) { res.writeHead(404); res.end('No disponible'); }
+        return;
+    } else if (pathname === '/admin/analytics' && req.method === 'GET') {
+        let rows = [];
+        try {
+            if (fs.existsSync(WHATSAPP_PAYMENTS_FILE)) {
+                rows = fs.readFileSync(WHATSAPP_PAYMENTS_FILE, 'utf8').split('\n').filter(Boolean)
+                    .map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
+            }
+        } catch (e) {}
+        const approved = rows.filter(r => r.status === 'aprobado');
+        const other = rows.filter(r => r.status === 'otro_destino');
+        const byPlan = {};
+        for (const r of approved) { const k = r.planId || 'sin_plan'; byPlan[k] = (byPlan[k] || 0) + (Number(r.amount) || 0); }
+        sendJson(res, 200, {
+            ok: true,
+            totals: {
+                scans: rows.length,
+                approved: approved.length,
+                otherDestination: other.length,
+                revenue: approved.reduce((s, r) => s + (Number(r.amount) || 0), 0)
+            },
+            byPlan,
+            rows: rows.slice(-30).reverse()
+        });
         return;
     } else if (pathname === '/admin/sales/overview' && req.method === 'GET') {
         const users = salesStore.listUsers();

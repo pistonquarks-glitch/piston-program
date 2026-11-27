@@ -80,6 +80,7 @@
       <button data-panel="payments">Pagos</button>
       <button data-panel="sales">Ventas / Planes</button>
       <button data-panel="sessions">Sesiones cliente</button>
+      <button data-panel="analytics">Ingresos / Escaneos</button>
       <button data-panel="config">Configuración</button>
     </nav>
     <div style="margin-top:18px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--muted)">
@@ -279,6 +280,20 @@
       </div>
     </section>
 
+    <section id="panel-analytics" class="panel">
+      <div class="grid">
+        <div class="card stat"><div class="k">Escaneos OCR</div><div class="v" id="anScans">—</div></div>
+        <div class="card stat"><div class="k">A otros destinos</div><div class="v" id="anOther">—</div></div>
+        <div class="card stat"><div class="k">Pagos aprobados</div><div class="v" id="anApproved">—</div></div>
+        <div class="card stat"><div class="k">Ingresos</div><div class="v" id="anRevenue" style="font-size:20px">—</div></div>
+      </div>
+      <div class="two">
+        <div class="card"><h2>Ingresos por plan</h2><div id="anByPlan"><div class="empty">Cargando...</div></div></div>
+        <div class="card"><h2>Últimos escaneos</h2><div id="anRows"><div class="empty">Cargando...</div></div></div>
+      </div>
+      <p class="small muted" style="margin-top:12px">Google Sheets: <a href="https://docs.google.com/spreadsheets/d/1JgygSw4k59YiiCc93ACIO02hCdWjvoGPmv4N5UFZP7M/edit" target="_blank" rel="noopener">abrir hoja Payments / OCR_Scans / Dashboard</a></p>
+    </section>
+
     <section id="panel-config" class="panel">
       <div class="card">
         <div class="toolbar"><strong>Configuración del bot</strong><button class="btn" onclick="saveConfig()">Guardar cambios</button><button class="btn ghost" onclick="loadConfig()">Recargar</button></div>
@@ -310,7 +325,7 @@ document.querySelectorAll('.nav button').forEach(btn=>{
     const p = btn.dataset.panel;
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
     $('panel-'+p).classList.add('active');
-    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],sessions:['Sesiones cliente','Carpetas aisladas, lanzadores OpenCode, pizarra y alertas de seguridad.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
+    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],sessions:['Sesiones cliente','Carpetas aisladas, lanzadores OpenCode, pizarra y alertas de seguridad.'],analytics:['Ingresos / Escaneos','Métricas de OCR, pagos aprobados y Google Sheets.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
     $('title').textContent=titles[p][0]; $('subtitle').textContent=titles[p][1];
     if(p==='dashboard'){loadDashboard();}
     if(p==='chats'){loadChats();}
@@ -318,6 +333,7 @@ document.querySelectorAll('.nav button').forEach(btn=>{
     if(p==='payments'){loadPayments();}
     if(p==='sales'){loadSales();}
     if(p==='sessions'){loadSessions();}
+    if(p==='analytics'){loadAnalytics();}
     if(p==='config'){loadConfig();}
   });
 });
@@ -811,6 +827,23 @@ async function loadSessionAlerts(){
     const rows=d.alerts||[];
     $('sessionAlerts').innerHTML=rows.length?rows.map(a=>`<div class="chat-item"><div class="jid">${esc(a.type||'')}</div><div class="sub">${esc(a.client||a.jid||'')} · ${esc(new Date(a.ts).toLocaleString('es-PE'))}</div><div class="preview">${esc(a.reason||'')}</div></div>`).join(''):'<div class="empty">Sin alertas.</div>';
   }catch(e){ $('sessionAlerts').innerHTML='<div class="empty">Error cargando alertas.</div>'; }
+}
+
+
+/* ===== Ingresos / Escaneos ===== */
+async function loadAnalytics(){
+  try{
+    const d=await api('/admin/analytics');
+    const t=d.totals||{};
+    $('anScans').textContent=t.scans??'0';
+    $('anOther').textContent=t.otherDestination??'0';
+    $('anApproved').textContent=t.approved??'0';
+    $('anRevenue').textContent='S/ '+Number(t.revenue||0).toFixed(2);
+    const bp=d.byPlan||{};
+    $('anByPlan').innerHTML=Object.keys(bp).length?Object.entries(bp).map(([k,v])=>`<div class="chat-item"><div class="jid">${esc(k)}</div><div class="preview">S/ ${Number(v).toFixed(2)}</div></div>`).join(''):'<div class="empty">Sin ingresos aún.</div>';
+    const rows=d.rows||[];
+    $('anRows').innerHTML=rows.length?rows.slice(0,15).map(r=>`<div class="chat-item"><div class="jid">${esc(r.status||'')} · S/ ${Number(r.amount||0).toFixed(2)}</div><div class="sub">${esc(r.sender||r.client||'')} → ${esc(r.receiver||'')}</div><div class="meta">${esc(r.app||'')} · ${esc(r.reference||'')}</div></div>`).join(''):'<div class="empty">Sin escaneos aún.</div>';
+  }catch(e){ $('anRows').innerHTML='<div class="empty">Error cargando métricas.</div>'; }
 }
 
 </script>
