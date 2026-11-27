@@ -976,6 +976,58 @@ async function looksLikeReceiptImage(payload, sessionId, remoteJid, altIds) {
     } catch (e) { return false; }
 }
 
+// Crea una sesión nueva en Open-WA y devuelve su QR para escanear.
+async function createOpenwaSession(label) {
+    const name = String(label || ('Piston-' + Date.now())).slice(0, 60);
+    const body = JSON.stringify({ name });
+    const create = await new Promise((resolve) => {
+        const req = http.request(`${OPENWA_URL}/api/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': OPENWA_API_KEY }
+        }, (res) => {
+            let b = ''; res.on('data', c => b += c);
+            res.on('end', () => { try { resolve({ status: res.statusCode, data: JSON.parse(b) }); } catch (e) { resolve({ status: res.statusCode, data: null }); } });
+        });
+        req.on('error', () => resolve({ status: 0, data: null }));
+        req.setTimeout(20000, () => { req.destroy(); resolve({ status: 0, data: null }); });
+        req.write(body); req.end();
+    });
+    if (create.status < 200 || create.status >= 300 || !create.data || !create.data.id) {
+        return { ok: false, error: 'create_failed_' + create.status };
+    }
+    const id = create.data.id;
+    await new Promise(r => setTimeout(r, 2500));
+    const start = await new Promise((resolve) => {
+        const req = http.request(`${OPENWA_URL}/api/sessions/${encodeURIComponent(id)}/start`, {
+            method: 'POST', headers: { 'X-API-Key': OPENWA_API_KEY }
+        }, (res) => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(res.statusCode)); });
+        req.on('error', () => resolve(0));
+        req.setTimeout(30000, () => { req.destroy(); resolve(0); });
+        req.end();
+    });
+    await new Promise(r => setTimeout(r, 3500));
+    const qr = await new Promise((resolve) => {
+        const req = http.request(`${OPENWA_URL}/api/sessions/${encodeURIComponent(id)}/qr`, {
+            method: 'GET', headers: { 'X-API-Key': OPENWA_API_KEY }
+        }, (res) => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { resolve({}); } }); });
+        req.on('error', () => resolve({}));
+        req.setTimeout(20000, () => { req.destroy(); resolve({}); });
+        req.end();
+    });
+    const dataUrl = qr.qrCode || qr.qr || '';
+    if (!dataUrl) return { ok: false, error: 'qr_unavailable', id };
+    const b64 = String(dataUrl).replace(/^data:[^;]+;base64,/, '');
+    const dir = path.join(DATA_DIR, 'session_qr');
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+    const file = path.join(dir, id + '.png');
+    fs.writeFileSync(file, Buffer.from(b64, 'base64'));
+    return {
+        ok: true, id, name, startStatus: start,
+        publicUrl: 'https://wa.pistonquarks.store/public/session-qr/' + encodeURIComponent(id),
+        localUrl: 'http://127.0.0.1:' + PORT + '/public/session-qr/' + encodeURIComponent(id)
+    };
+}
+
 async function alertSupervisor(sessionId, rec) {
     try {
         const key = String(rec.jid || '');
@@ -1281,6 +1333,24 @@ const server = http.createServer(async (req, res) => {
                     logEvent('info', 'voice_transcribed', { sessionId, from: remoteJid, text: String(msgText).slice(0, 300) });
                     console.log('[VOZ] Transcrito: ' + String(msgText).slice(0, 200));
                     // El texto transcrito continúa por el flujo normal (compuerta + IA).
+                }
+
+                // Solicitud de nueva sesión de WhatsApp desde el propio chat.
+                if (/^(nueva\s+sesi[oó]n|nuevo\s+n[uú]mero|crear\s+sesi[oó]n|conectar\s+otro\s+whatsapp)\b/i.test(msgText)) {
+                    logEvent('info', 'session_link_requested', { sessionId, from: remoteJid });
+                    await sendToWhatsApp(sessionId, remoteJid, 'Creando sesión nueva… te envío el QR en un momento.');
+                    try {
+                        const out = await createOpenwaSession('Piston-' + String(remoteJid).replace(/\D/g, '').slice(-6));
+                        if (out.ok) {
+                            await sendToWhatsApp(sessionId, remoteJid, 'Escanea este QR con tu otro WhatsApp:\n' + out.publicUrl);
+                        } else {
+                            await sendToWhatsApp(sessionId, remoteJid, 'No pude generar el QR. Intenta de nuevo en unos segundos.');
+                        }
+                    } catch (e) {
+                        logEvent('error', 'session_link_error', { sessionId, from: remoteJid, error: String(e && e.message || e).slice(0, 200) });
+                        await sendToWhatsApp(sessionId, remoteJid, 'No pude generar el QR. Intenta de nuevo.');
+                    }
+                    return;
                 }
 
                 // Disparador OCR a demanda / pago: CAPTURA DE, PAGO DE, OCR A IMAGEN.
@@ -2041,6 +2111,20 @@ const server = http.createServer(async (req, res) => {
         const fixed = clientLaunchers.fix20128Launcher();
         auditAdmin('fix_20128_launcher', fixed);
         sendJson(res, 200, { ok: true, ...fixed });
+        return;
+    } else if (/^\/public\/session-qr\/[^/]+$/.test(pathname) && req.method === 'GET') {
+        const id = decodeURIComponent(pathname.split('/')[3]);
+        const file = path.join(DATA_DIR, 'session_qr', path.basename(id) + '.png');
+        if (!fs.existsSync(file)) { sendJson(res, 404, { ok: false, error: 'qr_no_disponible' }); return; }
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' });
+        fs.createReadStream(file).pipe(res);
+        return;
+    } else if (pathname === '/public/session-new' && req.method === 'POST') {
+        try {
+            const b = JSON.parse(await readBody(req));
+            const out = await createOpenwaSession(b.name || ('Piston-' + Date.now()));
+            sendJson(res, out.ok ? 200 : 400, { ok: out.ok, ...out });
+        } catch (e) { sendJson(res, 400, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
         return;
     } else if (pathname === '/public/plans' && req.method === 'GET') {
         sendJson(res, 200, {

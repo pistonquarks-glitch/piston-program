@@ -1,4 +1,4 @@
-const CACHE = 'piston-quarks-v3';
+﻿const CACHE = 'piston-quarks-v4';
 const SHELL = [
   './', './index.html', './comprar.html', './planes.html', './pagos.html',
   './segmentos.html', './como-entrenamos.html', './niveles.html',
@@ -23,3 +23,4 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('./index.html')))
   );
 });
+

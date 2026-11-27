@@ -184,3 +184,9 @@ _Actualizado: 2026-11-23_
 - Contactos: nombre guardado solo; numero solo si no hay nombre; sin JID en lista ni en burbujas; sin contador de turnos.
 - Agregado acceso directo a WhatsApp automatizado (PWA) en el dashboard.
 - Arboles de logica verificados: 50 por cliente, flujo horizontal gatillo→atencion→interes→deseo→accion.
+
+
+## Enlaces WhatsApp, pagos y nueva sesión (2026-11-27)
+- Todos los enlaces van por wa.me con target=_blank para evitar ERR_BLOCKED_BY_RESPONSE de api.whatsapp.com dentro del marco. Botones acortados y CSS anti-desborde.
+- comprar.html muestra datos de pago: Plin/Yape 930640071, Interbank Simple 898 3510803100 y CCI 00389801351080310040; formulario con nombre, correo, celular, rubro y método de pago.
+- Comando WhatsApp "nueva sesion" crea sesión en Open-WA y envía link público https://wa.pistonquarks.store/public/session-qr/<id> para escanear QR; endpoint /public/session-new y /public/session-qr/:id.
