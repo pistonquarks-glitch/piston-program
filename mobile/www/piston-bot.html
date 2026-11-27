@@ -73,7 +73,7 @@
           <a class="btn btn-primary" href="#planes">Ver planes y suscribirme</a>
           <a class="btn btn-ghost" href="#como-funciona">Cómo funciona</a>
         </div>
-        <div class="warn">⚠️ Página en borrador local para revisión. Antes de publicar: confirmar precios finales, flujo real de activación y tiempo de entrega del enlace/QR.</div>
+        <div class="small" style="margin-top:14px;color:var(--neon)">Activación automática: pago verificado, panel asignado según tu plan y enlace entregado de inmediato. Sin instalaciones.</div>
       </div>
       <div class="hero-card">
         <div class="big">💬🤖</div>
@@ -97,7 +97,7 @@
       <h2>Cómo funciona</h2>
       <p class="sub">Embudo claro: entras, eliges plan, pagas, envías comprobante y recibes tu enlace de activación para escanear WhatsApp.</p>
       <div class="steps">
-        <div class="step"><div class="n">1</div><h4>Entra y elige</h4><p>Revisa el producto y selecciona plan de 1 mes o 6 meses.</p></div>
+        <div class="step"><div class="n">1</div><h4>Entra y elige</h4><p>Revisa el producto y elige el plan que necesitas.</p></div>
         <div class="step"><div class="n">2</div><h4>Confirma y paga</h4><p>Verifica tus datos, plan y duración. Paga por Plin/Yape o transferencia Interbank.</p></div>
         <div class="step"><div class="n">3</div><h4>Envía comprobante</h4><p>Manda la constancia por WhatsApp para confirmar tu pago.</p></div>
         <div class="step"><div class="n">4</div><h4>Escanea y activa</h4><p>Recibes el link de enlace para escanear tu WhatsApp y comenzar la configuración.</p></div>
@@ -128,7 +128,7 @@
       <h2>Zona de pago</h2>
       <p class="sub">Confirma tus datos, plan y duración antes de pagar. Luego envía tu comprobante por WhatsApp para validar la activación.</p>
       <div class="card" style="margin-bottom:14px">
-        <p><strong>Plan seleccionado:</strong> <span id="planSel">1 mes</span> <span style="color:var(--muted)">(puedes cambiarlo arriba)</span></p>
+        <p><strong>Plan seleccionado:</strong> <span id="planSel">Piston Bot - Automáticas</span> <span style="color:var(--muted)">(puedes cambiarlo arriba)</span></p>
       </div>
       <div class="paygrid">
         <div class="pay">
@@ -143,24 +143,19 @@
           <div class="num">898 3510803100</div>
           <div class="small">CCI: <span style="font-family:JetBrains Mono,monospace">00389801351080310040</span></div>
         </div>
-        <div class="pay">
-          <div class="ico">📱</div>
-          <div class="lbl">QR de pago rápido</div>
-          <div class="small">Coloca aquí tu imagen QR (ej. <code>/assets/qr-pistonbot.png</code>) antes de publicar.</div>
-          <div style="margin-top:10px;border:1px dashed rgba(52,211,153,.35);border-radius:10px;padding:18px;color:var(--muted);font-size:.82rem">QR pendiente</div>
-        </div>
+        
       </div>
 
       <div class="confirm">
         <h3>Confirmar pago y activar</h3>
         <p>Después de realizar el pago, envía el comprobante por WhatsApp para confirmar. Te responderemos con el enlace de activación para escanear tu WhatsApp y comenzar la configuración.</p>
         <a id="waBtn" class="btn btn-primary" target="_blank" rel="noopener" href="#">Enviar comprobante por WhatsApp</a>
-        <div class="warn">Verificación necesaria: el flujo real actual de Piston Bot usa Open-WA/escaneo QR y supervisión; antes de prometer “activación en 1 clic”, confirmar el proceso exacto de entrega y configuración.</div>
+        <div class="small" style="margin-top:14px">El OCR valida tu comprobante, te entrega el enlace de tu panel según el plan pagado y te guía para vincular WhatsApp con un código de 8 dígitos o con QR.</div>
       </div>
     </section>
 
     <footer>
-      Piston Quarks · Piston Bot — borrador local para revisión. No publicar sin confirmar precios, QR final y flujo real de activación.
+      Piston Quarks · Piston Bot — automatización de WhatsApp con IA, pago verificado y panel por plan.
     </footer>
   </div>
 
