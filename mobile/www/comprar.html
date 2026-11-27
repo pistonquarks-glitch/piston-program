@@ -34,6 +34,10 @@ textarea{min-height:80px;resize:vertical}
 a{color:var(--accent)}
 @media(max-width:820px){.cards,.grid{grid-template-columns:1fr}}
 </style>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="./piston-modern.css">
 </head>
 <body>
 <header>
@@ -194,6 +198,9 @@ function saveApi(){
   alert('Servidor guardado: '+v+'\nRecarga la página para aplicar.');
 }
 init();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
 </script>
 </body>
 </html>

@@ -160,3 +160,11 @@ _Actualizado: 2026-11-23_
 - Google Sheets (1JgygSw4k59YiiCc93ACIO02hCdWjvoGPmv4N5UFZP7M): pestañas Logs, Payments, OCR_Scans, Dashboard. Service account verificado. Se escribe TODO OCR en OCR_Scans y solo aprobados en Payments.
 - Dashboard local en panel: seccion Ingresos / Escaneos con /admin/analytics (totales, por plan, ultimos escaneos) y link a la hoja.
 - Compuerta: comando STOP desactiva continuidad; authorship lastReplyAuthor (bot/humano/panel); continuidad 6 h solo para clientes con plan activo; humano desde fromMe con texto distinto marca takeover 6 h.
+
+
+## Rediseño frontend y PWA (2026-11-27)
+- Identidad "Piston Chrome": azul noche #070b14, cromo, dorado #f2b632, tipografia Space Grotesk/Inter, superficies de cristal y cuadricula sutil.
+- Aplicado en src/panel.html, src/user-panel.html y todas las paginas de mobile/www (piston-modern.css). Panel responsive: sidebar horizontal en movil, tarjetas y navegacion scroll.
+- PWA app: manifest.webmanifest, sw.js, iconos 192/512 y registro de service worker en todas las paginas. Vista local http://127.0.0.1:8090 (python http.server en mobile/www).
+- Mismo paquete PWA copiado a la landing original auto wasap/AUTENFICACION Y PAGOS.
+- APK recompilado desde mobile/www (no hizo falta apktool: el codigo fuente Capacitor ya existe): dist/PistonBot-Android.apk 7.71 MB firmado, SHA256 3C06BED760A6507292EEE2916393FA508FA490DD69CB30EE0DB31C6B201DC31C.

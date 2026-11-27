@@ -1,0 +1,38 @@
+/* Piston Quarks · capa visual "Piston Chrome" (se aplica sobre site.css/styles.css) */
+:root{
+  --pq-bg:#070b14; --pq-card:rgba(16,26,44,.82); --pq-line:rgba(166,190,224,.16);
+  --pq-gold:#f2b632; --pq-gold2:#ffd46f; --pq-text:#eaf1ff; --pq-muted:#8fa4c4;
+  --pq-chrome:linear-gradient(135deg,#eef4ff,#9fb4d4 24%,#4d6486 50%,#dbe7fb 76%,#7f96b9);
+}
+html{scroll-behavior:smooth}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--pq-text);
+  background:radial-gradient(820px 480px at 8% -8%,rgba(242,182,50,.09),transparent 60%),
+             radial-gradient(720px 520px at 94% 0%,rgba(96,165,250,.11),transparent 60%),
+             linear-gradient(180deg,#070b14,#0b1220 45%,#08101d)!important;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(to bottom,#000,transparent 72%)}
+main,section,.container,.wrap,header,nav,footer{position:relative;z-index:1}
+h1,h2,h3,.price,.plan .name,.hero h1{font-family:"Space Grotesk",Inter,"Segoe UI",sans-serif!important;letter-spacing:-.02em}
+.btn,.btn-ghost,.cta,a.btn{display:inline-flex!important;align-items:center;justify-content:center;border-radius:12px!important;
+  padding:11px 16px!important;font-weight:800!important;letter-spacing:.01em;transition:.16s ease;text-decoration:none}
+.btn,.cta,a.btn{background:linear-gradient(135deg,var(--pq-gold),#d99a1a)!important;color:#0a0e17!important;border:none!important;box-shadow:0 10px 24px rgba(242,182,50,.16)}
+.btn:hover,.cta:hover,.btn-ghost:hover{transform:translateY(-1px)}
+.btn-ghost,.btn.btn-ghost{background:rgba(255,255,255,.04)!important;color:var(--pq-text)!important;border:1px solid var(--pq-line)!important;box-shadow:none}
+.card,.plan,article,section.panel,.box,.faq-item{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012))!important;
+  border:1px solid var(--pq-line)!important;border-radius:18px!important;box-shadow:0 18px 44px rgba(0,0,0,.22);backdrop-filter:blur(10px)}
+.badge,.plan-flag,.plan-flag{background:rgba(242,182,50,.12)!important;border:1px solid rgba(242,182,50,.28)!important;color:var(--pq-gold2)!important;border-radius:999px!important}
+input,textarea,select{background:rgba(7,13,24,.85)!important;color:var(--pq-text)!important;border:1px solid var(--pq-line)!important;border-radius:11px!important;outline:none}
+input:focus,textarea:focus,select:focus{border-color:rgba(242,182,50,.45)!important;box-shadow:0 0 0 3px rgba(242,182,50,.08)!important}
+header,nav{backdrop-filter:blur(14px);border-bottom:1px solid var(--pq-line)}
+.brand-logo,.logo{background:var(--pq-chrome)!important;border-radius:12px!important;box-shadow:0 8px 22px rgba(242,182,50,.16),inset 0 0 0 1px rgba(255,255,255,.35)}
+img[src*="logo"]:not(.brand-logo):not(.logo){border-radius:14px}
+a{color:var(--pq-gold2)}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(150,175,210,.22);border-radius:99px}::-webkit-scrollbar-track{background:transparent}
+@media(max-width:760px){
+  .btn,.btn-ghost,.cta,a.btn{width:100%}
+  .card,article,.plan,section{padding:16px!important}
+  h1,.hero h1{font-size:30px!important}
+  nav a,nav button{padding:9px 10px!important;font-size:12.5px!important}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
