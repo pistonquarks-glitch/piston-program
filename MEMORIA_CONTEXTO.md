@@ -111,7 +111,7 @@ _Actualizado: 2026-11-23_
 
 ## Sondeo de imagenes entrantes (2026-11-26)
 - Open-WA NO reenvia todas las imagenes por webhook; las guarda en su API. Se agrego `pollIncomingImages()` cada 8s (POLL_IMAGES_MS) que consulta `/api/sessions/<session>/messages`, detecta imagenes `incoming` nuevas con dedupe y, si hay disparador armado, las descarga y procesa con el mismo flujo OCR.
-- Webhook de Open-WA apunta a `https://wa.pistonquarks.store/webhook` (tunel). Open-WA rechaza destinos locales (SSRF), asi que no se puede apuntar a 127.0.0.1.
+- Webhook de Open-WA apunta a `https://pistonquarks.store/webhook` (tunel). Open-WA rechaza destinos locales (SSRF), asi que no se puede apuntar a 127.0.0.1.
 - Causa del "no responde": OPENWA_API_KEY vacia -> 401. Ya se lee de `C:\Users\USER\openwa-data\.api-key`.
 - Prueba final con imagen real: disparador PAGO DE suscripcion + captura S/100 => status=aprobado, plan=subscription, orden creada.
 
@@ -189,7 +189,7 @@ _Actualizado: 2026-11-23_
 ## Enlaces WhatsApp, pagos y nueva sesión (2026-11-27)
 - Todos los enlaces van por wa.me con target=_blank para evitar ERR_BLOCKED_BY_RESPONSE de api.whatsapp.com dentro del marco. Botones acortados y CSS anti-desborde.
 - comprar.html muestra datos de pago: Plin/Yape 930640071, Interbank Simple 898 3510803100 y CCI 00389801351080310040; formulario con nombre, correo, celular, rubro y método de pago.
-- Comando WhatsApp "nueva sesion" crea sesión en Open-WA y envía link público https://wa.pistonquarks.store/public/session-qr/<id> para escanear QR; endpoint /public/session-new y /public/session-qr/:id.
+- Comando WhatsApp "nueva sesion" crea sesión en Open-WA y envía link público https://pistonquarks.store/public/session-qr/<id> para escanear QR; endpoint /public/session-new y /public/session-qr/:id.
 
 
 ## 10 sesiones y QR dinámico (2026-11-27)
@@ -223,3 +223,10 @@ _Actualizado: 2026-11-23_
 - Anadido /public/pairing-code/:slug usando POST /api/sessions/:id/pairing-code de Open-WA: el cliente escribe un codigo de 8 digitos en WhatsApp y no necesita escanear.
 - Panel principal sin proveedor/modelo ni bloque Sesion/Bridge; contactos con nombre y un solo numero debajo, sincronizados desde /api/sessions/:id/contacts.
 - Planes cerebro: 1000 mensajes/mes, no acumulables.
+
+
+## Dominio raiz, SEO y blogs (2026-11-27)
+- Cloudflare Worker piston-bot-proxy en workers/piston-bot-proxy: rutas /piston-bot*, /blog*, /panel-plan*, /mi-panel*, /public/*, /admin* y clave IndexNow en pistonquarks.store,proxyando a wa.pistonquarks.store. El sitio del raíz sigue intacto.
+- PUBLIC_BASE cambiado a https://pistonquarks.store.
+- 7 blogs SEO por buyer en mobile/www/blog/, con keywords, FAQ schema y comparativa de planes; index.html y sitemap.
+- IndexNow 202 OK en api.indexnow.org y Bing con 9 URLs.

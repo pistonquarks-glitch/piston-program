@@ -1,0 +1,18 @@
+name = "piston-bot-proxy"
+main = "worker.js"
+compatibility_date = "2026-11-27"
+
+[env.production]
+routes = [
+  { pattern = "pistonquarks.store/piston-bot*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/pistonbot-indexnow-20261127a1b2c3d4.txt", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/piston-bot-sitemap.xml", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/blog*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/panel-plan*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/mi-panel*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/panel-cliente*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/instalacion*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/setup*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/public/*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/admin*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" }
+]

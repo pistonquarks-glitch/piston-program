@@ -1030,7 +1030,7 @@ async function chatsWithContactNames(limit) {
 }
 
 // === Paneles por cliente/plan (Piston Bot) ===
-const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || 'https://wa.pistonquarks.store';
+const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || 'https://pistonquarks.store';
 const PANEL_TABS_BY_PLAN = {
     automatizadas: ['instalacion', 'arboles', 'pagos'],
     cerebro_sin_ocr: ['instalacion', 'arboles', 'cerebro', 'pagos'],
@@ -1135,7 +1135,8 @@ function paymentsForUser(user) {
 }
 
 function serveStaticFromMobile(res, file) {
-    const p = path.join(__dirname, '..', '..', 'mobile', 'www', path.basename(file));
+    const rel = String(file).replace(/^[\/\\]+/, '').replace(/\.\.[\/\\]/g, '');
+    const p = path.join(__dirname, '..', '..', 'mobile', 'www', rel);
     if (!fs.existsSync(p)) { sendJson(res, 404, { ok: false, error: 'pagina_no_disponible' }); return; }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     fs.createReadStream(p).pipe(res);
@@ -1326,7 +1327,7 @@ async function createOpenwaSession(label) {
     fs.writeFileSync(file, Buffer.from(b64, 'base64'));
     return {
         ok: true, id, name, startStatus: start,
-        publicUrl: 'https://wa.pistonquarks.store/public/session-qr/' + encodeURIComponent(id),
+        publicUrl: 'https://pistonquarks.store/public/session-qr/' + encodeURIComponent(id),
         localUrl: 'http://127.0.0.1:' + PORT + '/public/session-qr/' + encodeURIComponent(id)
     };
 }
@@ -1486,7 +1487,7 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
                 if (target) {
                     target.assignedTo = { userId: assigned && assigned.id, orderId, email: userLabel, jid: remoteJid, ts: new Date().toISOString() };
                     writeSessionsRegistry(items);
-                    const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(target.slug);
+                    const link = 'https://pistonquarks.store/public/setup/' + encodeURIComponent(target.slug);
                     const uEmail = assigned && assigned.email;
                     const uCode = assigned && assigned.accessCode;
                     const planForTabs = (assigned && assigned.planId) || planId || orderId;
@@ -1692,7 +1693,7 @@ const server = http.createServer(async (req, res) => {
                             writeSessionsRegistry(items);
                             auditAdmin('lazy_session_start', { slug: item.slug, port: item.port, pid: item.pid, from: remoteJid });
                         }
-                        const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(item.slug);
+                        const link = 'https://pistonquarks.store/public/setup/' + encodeURIComponent(item.slug);
                         await sendToWhatsApp(sessionId, remoteJid, 'Tu puente ' + item.port + ' está activo. Abre tu QR para escanear:\n' + link);
                         logEvent('info', 'lazy_session_ready', { slug: item.slug, port: item.port, from: remoteJid });
                     } catch (e) {
@@ -2478,6 +2479,21 @@ const server = http.createServer(async (req, res) => {
         const d = await getQrData(slug);
         const out = { ...d, age: d.ts ? Math.round((Date.now() - d.ts) / 1000) : 0 };
         sendJson(res, out.ok ? 200 : 404, out);
+        return;
+    } else if (/^\/pistonbot-indexnow-[a-z0-9-]+\.txt$/.test(pathname) && req.method === 'GET') {
+        serveStaticFromMobile(res, path.basename(pathname));
+        return;
+    } else if (pathname === '/piston-bot-sitemap.xml' && req.method === 'GET') {
+        const f = path.join(__dirname, '..', '..', 'mobile', 'www', 'piston-bot-sitemap.xml');
+        if (!fs.existsSync(f)) { sendJson(res, 404, { ok: false, error: 'sitemap_no_disponible' }); return; }
+        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'no-store' });
+        fs.createReadStream(f).pipe(res);
+        return;
+    } else if ((pathname === '/blog' || pathname === '/blog/') && req.method === 'GET') {
+        serveStaticFromMobile(res, 'blog/index.html');
+        return;
+    } else if (/^\/blog\/[a-z0-9-]+\.html$/.test(pathname) && req.method === 'GET') {
+        serveStaticFromMobile(res, 'blog/' + path.basename(pathname));
         return;
     } else if (/^\/panel-plan[123]$/.test(pathname) && req.method === 'GET') {
         const n = pathname.slice(-1);
