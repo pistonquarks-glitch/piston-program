@@ -976,6 +976,116 @@ async function looksLikeReceiptImage(payload, sessionId, remoteJid, altIds) {
     } catch (e) { return false; }
 }
 
+// === Paneles por cliente/plan (Piston Bot) ===
+const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || 'https://wa.pistonquarks.store';
+const PANEL_TABS_BY_PLAN = {
+    automatizadas: ['instalacion', 'arboles', 'pagos'],
+    cerebro_sin_ocr: ['instalacion', 'arboles', 'cerebro', 'pagos'],
+    cerebro_ocr: ['instalacion', 'arboles', 'cerebro', 'pagos'],
+    reportes: ['instalacion', 'pagos', 'cerebro'],
+    crm: ['instalacion', 'cerebro', 'arboles', 'pagos'],
+    reportes_graficos: ['instalacion', 'pagos', 'cerebro'],
+    crm_panel: ['instalacion', 'cerebro', 'arboles', 'pagos'],
+    subscription: ['instalacion', 'arboles', 'pagos'],
+    annual: ['instalacion', 'arboles', 'pagos'],
+    lifetime: ['instalacion', 'arboles', 'cerebro', 'pagos']
+};
+const PANEL_TAB_LABELS = {
+    instalacion: 'Instalación',
+    arboles: 'Árboles de lógica',
+    cerebro: 'Cerebro IA / Directivas',
+    pagos: 'Registro de pagos'
+};
+const DOWNLOADS = [
+    { id: 'apk', label: 'App Android (APK)', file: 'PistonBot-Android.apk', mime: 'application/vnd.android.package-archive' },
+    { id: 'exe', label: 'Instalador Windows (EXE)', file: 'PistonBot-Instalador-MVP-PanelAI.exe', mime: 'application/octet-stream' },
+    { id: 'zip', label: 'Portable Windows (ZIP)', file: 'PistonBot-Portable-MVP.zip', mime: 'application/zip' }
+];
+
+function clientFromQuery(req) {
+    const q = new URL(req.url, 'http://localhost').searchParams;
+    const email = String(q.get('email') || '').trim();
+    const code = String(q.get('code') || '').trim().toUpperCase();
+    if (!email || !code) return null;
+    const user = salesStore.findUserByEmail(email);
+    if (!user || String(user.accessCode || '').toUpperCase() !== code) return null;
+    return user;
+}
+
+function tabsForPlan(planId) {
+    const base = PANEL_TABS_BY_PLAN[String(planId || '')] || ['instalacion', 'arboles', 'pagos'];
+    return base.map(id => ({ id, label: PANEL_TAB_LABELS[id] || id }));
+}
+
+function slotForUser(user) {
+    const items = readSessionsRegistry();
+    const digits = String(user.phone || '').replace(/\D/g, '');
+    return items.find(x => x.assignedTo && (
+        normEmail(x.assignedTo.email) === normEmail(user.email) ||
+        String((x.assignedTo.jid || '').replace(/\D/g, '')) === digits
+    )) || null;
+}
+
+function bootstrapForUser(user) {
+    const catalog = pricing.catalog();
+    const plan = (catalog.plans || []).find(x => x.id === user.planId) || (catalog.addons || []).find(x => x.id === user.planId) || null;
+    const tabs = tabsForPlan(user.planId);
+    const slot = slotForUser(user);
+    const slug = slot ? slot.slug : SESSION_SLUG;
+    const usage = salesStore.getUsage(user.id);
+    return {
+        ok: true,
+        user: {
+            name: user.name, email: user.email, phone: user.phone, business: user.business,
+            planId: user.planId, planStatus: user.planStatus,
+            planStartedAt: user.planStartedAt, planExpiresAt: user.planExpiresAt
+        },
+        plan,
+        tabs,
+        session: { slug, port: slot ? slot.port : PORT, name: slot ? slot.name : SESSION_NAME },
+        links: {
+            panel: PUBLIC_BASE + '/mi-panel',
+            setup: PUBLIC_BASE + '/public/setup/' + encodeURIComponent(slug),
+            qrData: PUBLIC_BASE + '/public/qr-data/' + encodeURIComponent(slug),
+            activateWa: 'https://wa.me/51930640071?text=' + encodeURIComponent('ACTIVAR MI BOT - ' + (user.phone || user.email)),
+            helpWa: 'https://wa.me/51930640071?text=' + encodeURIComponent('Ayuda con mi panel de Piston Bot')
+        },
+        downloads: DOWNLOADS.map(d => ({ id: d.id, label: d.label, url: PUBLIC_BASE + '/public/download/' + d.id })),
+        usage: { tokens: usage.tokens, messages: usage.messages, conversations: usage.conversations, period: usage.period }
+    };
+}
+
+function paymentsForUser(user) {
+    const digits = String(user.phone || '').replace(/\D/g, '');
+    const email = normEmail(user.email);
+    const rows = [];
+    try {
+        for (const line of fs.readFileSync(WHATSAPP_PAYMENTS_FILE, 'utf8').split('\n')) {
+            if (!line.trim()) continue;
+            try {
+                const r = JSON.parse(line);
+                const from = String(r.jid || r.client || r.phone || '').replace(/\D/g, '');
+                if ((digits && (from === digits || from.endsWith(digits.slice(-9)))) || normEmail(r.email) === email) {
+                    rows.push({ orderId: r.orderId || null, status: r.status, amount: r.amount || null,
+                        planId: r.planId || null, app: r.app || null, reference: r.reference || null, ts: r.ts || null });
+                }
+            } catch (e) {}
+        }
+    } catch (e) {}
+    const orders = salesStore.findOrdersByEmail(user.email).map(o => ({
+        orderId: o.id, status: o.status, totalLabel: o.quote && o.quote.totalLabel,
+        planId: o.planId, createdAt: o.createdAt, reviewedAt: o.reviewedAt
+    }));
+    return { ok: true, payments: rows, orders };
+}
+
+function serveStaticFromMobile(res, file) {
+    const p = path.join(__dirname, '..', '..', 'mobile', 'www', path.basename(file));
+    if (!fs.existsSync(p)) { sendJson(res, 404, { ok: false, error: 'pagina_no_disponible' }); return; }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    fs.createReadStream(p).pipe(res);
+}
+
 // Cache de QR por sesión: evita consultar Open-WA 10 veces por segundo.
 const qrCache = new Map();
 const qrLocks = new Map();
@@ -1315,7 +1425,16 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
                     target.assignedTo = { userId: assigned && assigned.id, orderId, email: userLabel, jid: remoteJid, ts: new Date().toISOString() };
                     writeSessionsRegistry(items);
                     const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(target.slug);
-                    reply += '\n\nTu puente quedo reservado en el puerto ' + target.port + '. Cuando quieras activarlo escribe ACTIVAR MI BOT.\nQR: ' + link;
+                    const uEmail = assigned && assigned.email;
+                    const uCode = assigned && assigned.accessCode;
+                    const planForTabs = (assigned && assigned.planId) || planId || orderId;
+                    const firstTab = (tabsForPlan(planForTabs)[0] || {}).id || 'instalacion';
+                    let panelLink = PUBLIC_BASE + '/mi-panel';
+                    if (uEmail && uCode) panelLink += '?email=' + encodeURIComponent(uEmail) + '&code=' + encodeURIComponent(uCode) + '&panel=' + encodeURIComponent(firstTab);
+                    reply += '\n\nListo: tu plan quedo activo y tu puente ' + target.port + ' reservado.';
+                    reply += '\n1) Abre tu panel segun tu pago: ' + panelLink;
+                    reply += '\n2) Activa tu bot escribiendo ACTIVAR MI BOT.';
+                    reply += '\n3) Escanea tu QR: ' + link;
                     logEvent('info', 'session_slot_assigned', { slug: target.slug, port: target.port, orderId });
                 }
             }
@@ -2297,6 +2416,56 @@ const server = http.createServer(async (req, res) => {
         const d = await getQrData(slug);
         const out = { ...d, age: d.ts ? Math.round((Date.now() - d.ts) / 1000) : 0 };
         sendJson(res, out.ok ? 200 : 404, out);
+        return;
+    } else if ((pathname === '/piston-bot' || pathname === '/piston-bot.html' || pathname === '/') && req.method === 'GET') {
+        serveStaticFromMobile(res, 'piston-bot.html');
+        return;
+    } else if ((pathname === '/mi-panel' || pathname === '/panel-cliente' || pathname === '/instalacion') && req.method === 'GET') {
+        try {
+            const p = path.join(__dirname, '..', 'panel.html');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+            fs.createReadStream(p).pipe(res);
+        } catch (e) { sendJson(res, 404, { ok: false, error: 'panel_no_disponible' }); }
+        return;
+    } else if (pathname === '/public/client/bootstrap' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        try {
+            if (logicTrees.list(user.id).length < 50) logicTrees.generate(user.id, 50);
+        } catch (e) {}
+        sendJson(res, 200, bootstrapForUser(user));
+        return;
+    } else if (pathname === '/public/client/trees' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (!tabsForPlan(user.planId).some(t => t.id === 'arboles')) { sendJson(res, 403, { ok: false, error: 'plan_sin_arboles' }); return; }
+        const q = new URL(req.url, 'http://localhost').searchParams;
+        const limit = Math.min(50, Math.max(1, parseInt(q.get('limit'), 10) || 50));
+        const trees = logicTrees.list(user.id).slice(0, limit);
+        sendJson(res, 200, { ok: true, total: trees.length, trees });
+        return;
+    } else if (pathname === '/public/client/payments' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        sendJson(res, 200, paymentsForUser(user));
+        return;
+    } else if (pathname === '/public/client/brain' && req.method === 'GET') {
+        const user = clientFromQuery(req);
+        if (!user) { sendJson(res, 403, { ok: false, error: 'credenciales_invalidas' }); return; }
+        if (!tabsForPlan(user.planId).some(t => t.id === 'cerebro')) { sendJson(res, 403, { ok: false, error: 'plan_sin_cerebro' }); return; }
+        let directives = [];
+        try { directives = JSON.parse(fs.readFileSync(DIRECTIVES_FILE, 'utf8')) || []; } catch (e) {}
+        sendJson(res, 200, { ok: true, directives: Array.isArray(directives) ? directives : (directives.directives || []),
+            keywords: BOT_STATE_KEYWORDS, promptPreview: String(SYSTEM_PROMPT || '').slice(0, 300) });
+        return;
+    } else if (/^\/public\/download\/([^/]+)$/.test(pathname) && req.method === 'GET') {
+        const id = decodeURIComponent(pathname.split('/')[3]);
+        const d = DOWNLOADS.find(x => x.id === id);
+        if (!d) { sendJson(res, 404, { ok: false, error: 'descarga_no_disponible' }); return; }
+        const f = path.join(__dirname, '..', '..', 'dist', d.file);
+        if (!fs.existsSync(f)) { sendJson(res, 404, { ok: false, error: 'archivo_no_disponible' }); return; }
+        res.writeHead(200, { 'Content-Type': d.mime, 'Content-Disposition': 'attachment; filename="' + d.file + '"' });
+        fs.createReadStream(f).pipe(res);
         return;
     } else if (/^\/public\/session-qr\/[^/]+$/.test(pathname) && req.method === 'GET') {
         const id = decodeURIComponent(pathname.split('/')[3]);

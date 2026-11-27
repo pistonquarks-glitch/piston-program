@@ -205,3 +205,12 @@ _Actualizado: 2026-11-23_
 - Comando WhatsApp "activar mi bot" / "iniciar mi sesion" enciende SOLO el puente asignado al numero y entrega su QR.
 - Esto evita saturar WSL/Docker: no se arrancan 10 motores WhatsApp a la vez.
 - Causa del error Docker WSL unresponsive: 10 motores OpenWA simultaneous agotaron memoria/WSL. Se apagaron, se hizo wsl --shutdown y Docker volvio healthy.
+
+
+## Paneles por plan y landing de Piston Bot (2026-11-27)
+- Se reutiliza src/panel.html: modo cliente con ?email=&code= oculta pestañas según plan y cambia las APIs por /public/client/*.
+- Pestañas: instalación (descargas/QR/activación), árboles de lógica (50), cerebro IA (directivas) y registro de pagos (solo del cliente).
+- Selector de temas verdes: esmeralda, manzana y WhatsApp.
+- Landing piston-bot.html con 5 botones wa.me por producto y enlace "Mi panel".
+- Rutas públicas nuevas: /piston-bot, /mi-panel, /public/client/bootstrap|trees|payments|brain, /public/download/:id.
+- Tras pago aprobado el bot envía enlace al panel del plan, QR y ACTIVAR MI BOT.

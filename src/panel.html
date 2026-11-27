@@ -20,6 +20,11 @@
     --ok:#34d399; --warn:#f59e0b; --bad:#f87171; --blue:#60a5fa;
     --radius:16px; --shadow:0 16px 40px rgba(0,0,0,.22);
   }
+  html[data-theme="whatsapp"]{--accent:#25D366;--accent2:#128C7E;--line:rgba(37,211,102,.26);--line-strong:rgba(37,211,102,.6)}
+  html[data-theme="manzana"]{--accent:#8db600;--accent2:#50c878;--line:rgba(141,182,0,.26)}
+  html[data-theme="esmeralda"]{--accent:#50c878;--accent2:#8db600}
+  .plan-badge{display:inline-block;padding:5px 11px;border-radius:999px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.35);color:#b7ffd0;font-size:11px;font-weight:800;margin-right:10px}
+  .theme-sel{background:#0b2420;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:11px}
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);min-height:100vh;
@@ -120,6 +125,16 @@
 </style>
 </head>
 <body>
+<div id="clientLogin" class="card" style="display:none;max-width:520px;margin:22px auto">
+  <h2>Acceso a tu panel</h2>
+  <p class="small muted">Ingresa el correo y el código que recibiste al confirmar tu pago.</p>
+  <form onsubmit="event.preventDefault();location.href='/mi-panel?email='+encodeURIComponent(document.getElementById('loginEmail').value)+'&code='+encodeURIComponent(document.getElementById('loginCode').value);">
+    <input id="loginEmail" type="email" placeholder="tu@correo.com" required>
+    <input id="loginCode" placeholder="Codigo de acceso" required>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+</div>
+
 <div class="app">
   <aside class="side">
     <div class="brand"><div class="logo"><img src="/admin/icon-192.png" alt="Piston Quarks"></div><div><h1>Piston Bot</h1><p>by Piston Quarks · Panel WhatsApp</p></div></div>
@@ -132,6 +147,7 @@
       <button data-panel="sessions">Sesiones cliente</button>
       <button data-panel="analytics">Ingresos / Escaneos</button>
       <button data-panel="arboles">Árboles</button>
+      <button data-panel="instalacion">Instalación</button>
       <button data-panel="cuenta">Cuenta</button>
       <button data-panel="config">Configuración</button>
     </nav>
@@ -148,6 +164,12 @@
         <h2 id="title">Dashboard</h2>
         <p id="subtitle">Estado general del bot y acceso rápido.</p>
       </div>
+      <span id="planBadge" class="plan-badge" style="display:none">Sin plan</span>
+      <select class="theme-sel" onchange="document.documentElement.dataset.theme=this.value" aria-label="Color del panel">
+        <option value="esmeralda">Verde esmeralda</option>
+        <option value="manzana">Verde manzana</option>
+        <option value="whatsapp">Verde WhatsApp</option>
+      </select>
       <div class="pill"><span class="dot"></span><span id="statusPill">Conectado al bridge</span></div>
     </div>
 
@@ -370,7 +392,22 @@
       </div>
     </section>
 
-    <section id="panel-cuenta" class="panel">
+    <section id="panel-instalacion" class="panel">
+      <div class="card">
+        <h2>Instalación de tu Piston Bot</h2>
+        <p class="small muted" id="installSlot">Cargando tu sesión...</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin:14px 0">
+          <a id="installQr" class="btn" href="#" target="_blank" rel="noopener">Abrir mi QR</a>
+          <a id="installWa" class="btn" href="https://wa.me/51930640071" target="_blank" rel="noopener">Activar mi bot</a>
+          <a id="installHelp" class="btn ghost" href="https://wa.me/51930640071" target="_blank" rel="noopener">Ayuda</a>
+        </div>
+        <p class="small muted" id="installQrText"></p>
+        <ol class="small muted"><li>Descarga la app para tu dispositivo.</li><li>Abre tu QR y escanea desde WhatsApp en Dispositivos vinculados.</li><li>Escribe ACTIVAR MI BOT para encender tu puente.</li></ol>
+        <div id="installDownloads" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+<section id="panel-cuenta" class="panel">
       <div class="card">
         <h2>Mi cuenta</h2>
         <p class="small muted">Acceso del cliente a sus planes, consumo y chats.</p>
@@ -409,7 +446,7 @@ document.querySelectorAll('.nav button').forEach(btn=>{
     const p = btn.dataset.panel;
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
     $('panel-'+p).classList.add('active');
-    const titles = {dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],sessions:['Sesiones cliente','Carpetas aisladas, lanzadores OpenCode, pizarra y alertas de seguridad.'],analytics:['Ingresos / Escaneos','Métricas de OCR, pagos aprobados y Google Sheets.'],arboles:['Árboles','50 árboles de lógica por cliente con etapas atención, interés, deseo y acción.'],cuenta:['Cuenta','Acceso del cliente a planes, consumo y chats.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
+    const titles = {instalacion:['Instalación','Descarga la app, activa tu bot y escanea tu QR.'],dashboard:['Dashboard','Estado general del bot y acceso rápido.'],chats:['Conversaciones','Lee chats y responde manualmente desde tu panel.'],directives:['Directivas','Reglas operativas que el bot debe seguir.'],payments:['Pagos','Comprobantes y verificaciones registradas.'],sales:['Ventas / Planes','Usuarios, pedidos, comprobantes OCR y asignación de planes.'],sessions:['Sesiones cliente','Carpetas aisladas, lanzadores OpenCode, pizarra y alertas de seguridad.'],analytics:['Ingresos / Escaneos','Métricas de OCR, pagos aprobados y Google Sheets.'],arboles:['Árboles','50 árboles de lógica por cliente con etapas atención, interés, deseo y acción.'],cuenta:['Cuenta','Acceso del cliente a planes, consumo y chats.'],config:['Configuración','Prompt, modelo, keywords y operadores.']};
     $('title').textContent=titles[p][0]; $('subtitle').textContent=titles[p][1];
     if(p==='dashboard'){loadDashboard();}
     if(p==='chats'){loadChats();}
@@ -433,8 +470,30 @@ async function ensureAdminToken(){
   setAdminToken(t);
   return t;
 }
+const CLIENT_Q = (() => { const q=new URLSearchParams(location.search); return {email:q.get('email')||'',code:q.get('code')||'',panel:q.get('panel')||''}; })();
+const IS_CLIENT = !!(CLIENT_Q.email && CLIENT_Q.code);
+let CLIENT_BOOT = null;
+
 async function api(path, opts={}){
   const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+  if (IS_CLIENT) {
+    const q = 'email='+encodeURIComponent(CLIENT_Q.email)+'&code='+encodeURIComponent(CLIENT_Q.code);
+    let mapped = null;
+    if (path.indexOf('/admin/logic-trees?') === 0 && !opts.method) mapped = '/public/client/trees?'+q+'&limit=50';
+    else if (path === '/admin/payments' && !opts.method) mapped = '/public/client/payments?'+q;
+    else if (path === '/admin/directives' && !opts.method) mapped = '/public/client/brain?'+q;
+    if (mapped) {
+      try {
+        const r = await fetch(mapped, { headers });
+        const d = await r.json().catch(()=>({}));
+        if (path === '/admin/payments') return { ok:true, recent:(d.payments||[]).map(x=>({ts:x.ts,from:x.planId||'',status:x.status,amount:x.amount,operation:x.reference,imagePath:x.app||'',currency:'PEN'})) };
+        if (path === '/admin/directives') return { ok:true, directives:(d.directives||[]).map(x=>({text:x.text||x,addedAt:x.addedAt||null,from:'ia'})) };
+        return d;
+      } catch(e) { return { ok:false, error:'sin_conexion' }; }
+    }
+    if (String(opts.method||'GET').toUpperCase() !== 'GET') return { ok:false, error:'modo_cliente_solo_lectura' };
+    return { ok:true };
+  }
   const tkn = getAdminToken();
   if (tkn) headers['X-Admin-Token'] = tkn;
   let r = await fetch(path, { ...opts, headers });
@@ -953,6 +1012,39 @@ async function loadTrees(){
   }catch(e){ $('treesList').innerHTML='<div class="empty">Error cargando árboles.</div>'; }
 }
 
+
+async function initClientMode(){
+  if(!IS_CLIENT) return;
+  document.body.classList.add('client-mode');
+  const login = $('clientLogin'); if(login) login.style.display='block';
+  try{
+    const d = await fetch('/public/client/bootstrap?email='+encodeURIComponent(CLIENT_Q.email)+'&code='+encodeURIComponent(CLIENT_Q.code)).then(r=>r.json());
+    if(!d.ok){ if(login) login.style.display='block'; return; }
+    CLIENT_BOOT = d;
+    if(login) login.style.display='none';
+    const badge = $('planBadge'); if(badge){ badge.style.display='inline-block'; badge.textContent=(d.plan&&d.plan.label)||d.user.planId||'Sin plan'; }
+    const allowed = (d.tabs||[]).map(t=>t.id);
+    const map = {instalacion:'instalacion',arboles:'arboles',cerebro:'directives',pagos:'payments'};
+    document.querySelectorAll('.nav button').forEach(btn=>{
+      const k = btn.dataset.panel;
+      const keep = Object.keys(map).some(x=>map[x]===k && allowed.includes(x));
+      btn.style.display = keep ? '' : 'none';
+      if(k==='directives' && keep) btn.textContent='Cerebro IA';
+      if(k==='payments' && keep) btn.textContent='Registro de pagos';
+    });
+    const set=(id,v)=>{const el=$(id); if(el) el.textContent=v;};
+    const href=(id,v)=>{const el=$(id); if(el) el.href=v;};
+    href('installQr',d.links.setup); set('installQrText',d.links.setup);
+    href('installWa',d.links.activateWa); href('installHelp',d.links.helpWa);
+    set('installSlot',(d.session.name||'Piston Bot')+' · puerto '+(d.session.port||''));
+    const dl=$('installDownloads'); if(dl) dl.innerHTML=(d.downloads||[]).map(x=>'<a class="btn" href="'+x.url+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>').join(' ');
+    document.querySelectorAll('[onclick="generateTrees()"],[onclick="clearPayments()"],[onclick="addDirective()"],[onclick="clearDirectives()"]').forEach(b=>b.style.display='none');
+    const target = allowed.includes(CLIENT_Q.panel) ? CLIENT_Q.panel : (allowed[0]||'instalacion');
+    const btn = document.querySelector('.nav button[data-panel="'+map[target]+'"]');
+    if(btn) btn.click();
+  }catch(e){ console.error(e); }
+}
+initClientMode();
 </script>
 </body>
 </html>

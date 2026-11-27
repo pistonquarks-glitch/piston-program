@@ -16,3 +16,14 @@ Cada enlace está unido a un puerto propio del servidor. Tras el pago confirmado
 | 10 | 2029 | https://wa.pistonquarks.store/public/setup/piston-bot-10 | http://127.0.0.1:2029/admin |
 
 El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug`; si Open-WA no responde, se usa la última copia local.
+
+
+## Enlaces de producto y paneles (2026-11-27)
+- Página Piston Bot: https://wa.pistonquarks.store/piston-bot
+- Panel del cliente (según plan): https://wa.pistonquarks.store/mi-panel
+- Panel de sesiones: https://wa.pistonquarks.store/admin/sessions
+- Cada producto abre WhatsApp con mensaje listo: automatizadas S/15, cerebro sin OCR S/50, cerebro con OCR S/120, reportes S/50 y CRM S/70.
+- Tras pago aprobado el bot entrega el enlace al panel con el correo y código de acceso, más el QR y la orden de ACTIVAR MI BOT.
+- El panel muestra solo las secciones permitidas por el plan: instalación, árboles de lógica, cerebro IA y registro de pagos.
+- Temas de color: esmeralda, manzana y WhatsApp (selector en la cabecera del panel).
+- Descargas desde el panel: APK, EXE y ZIP en /public/download/:id.
