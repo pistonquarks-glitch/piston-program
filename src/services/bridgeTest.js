@@ -976,6 +976,137 @@ async function looksLikeReceiptImage(payload, sessionId, remoteJid, altIds) {
     } catch (e) { return false; }
 }
 
+// Cache de QR por sesión: evita consultar Open-WA 10 veces por segundo.
+const qrCache = new Map();
+const qrLocks = new Map();
+const QR_TTL_MS = 20000;
+
+// Página pública de configuración de una sesión WhatsApp.
+function setupPageHtml(slot) {
+    const name = String(slot.name || 'Sesión');
+    const port = Number(slot.port || 0);
+    const slug = String(slot.slug || '');
+    const jid = String(slot.jid || '');
+    const localPanel = 'http://127.0.0.1:' + port + '/admin';
+    const apiQr = '/public/qr-data/' + encodeURIComponent(slug);
+    return [
+        '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<title>Configurar ' + name + ' - Piston Bot</title>',
+        '<link rel="icon" href="/admin/icon-192.png">',
+        '<style>',
+        ':root{--bg:#061a16;--card:#0e332c;--line:rgba(80,200,152,.22);--text:#eafff6;--muted:#9fd8c2;--gold:#50c878}',
+        '*{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#061a16,#0a2a24 45%,#061a16);min-height:100vh}',
+        '.wrap{max-width:720px;margin:0 auto;padding:24px 16px 60px}',
+        '.brand{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px}',
+        '.brand img{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#d8ffe9,#50c878)}',
+        '.brand h1{font-size:18px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}',
+        '.card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.25)}',
+        'h2{font-size:18px;margin:0 0 12px}.small{font-size:12px;color:var(--muted)}',
+        '.qr{display:block;width:260px;max-width:100%;margin:16px auto;padding:10px;background:#fff;border-radius:14px}',
+        'ol{line-height:1.8}.btn{display:inline-block;background:linear-gradient(135deg,var(--gold),#2f9e68);color:#041a13;padding:10px 15px;border-radius:10px;text-decoration:none;font-weight:800}',
+        '.slot{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(141,182,0,.14);border:1px solid rgba(141,182,0,.35);color:#d9ff9b;font-size:11px}',
+        '.qrstate{text-align:center;font-size:11px;color:var(--muted);margin-top:-6px}',
+        '</style></head><body><div class="wrap">',
+        '<div class="brand"><img src="/admin/icon-192.png" alt="Piston Quarks"><div><h1>Piston Bot · ' + name + '</h1><p>Configuración automatizada de WhatsApp</p></div></div>',
+        '<div class="card"><span class="slot">PUERTO ' + port + ' · ' + slug + '</span>',
+        '<h2>Escanea para vincular tu WhatsApp</h2>',
+        '<p class="small">El QR se actualiza solo cada 20 segundos. Si WhatsApp lo旋转, esta página muestra el vigente automáticamente.</p>',
+        '<img id="qrImg" class="qr" src="/public/session-qr/' + encodeURIComponent(jid) + '" alt="QR de WhatsApp">',
+        '<div id="qrState" class="qrstate">Cargando QR...</div>',
+        '<ol><li>Abre WhatsApp en tu celular.</li><li>Entra a <b>Dispositivos vinculados</b> → <b>Vincular dispositivo</b>.</li><li>Escanea este código QR.</li><li>Listo: tu bot queda operando en línea desde el servidor.</li></ol>',
+        '<p class="small">Nivel profesional: alta, pago, verificación, asignación de ranura y entrega de enlace son automáticos.</p>',
+        '<p><a class="btn" href="' + localPanel + '" target="_blank" rel="noopener">Abrir panel local (' + port + ')</a></p>',
+        '<script>',
+        '(function(){var api=' + JSON.stringify(apiQr) + ';var img=document.getElementById("qrImg");var st=document.getElementById("qrState");',
+        'async function refresh(){try{var r=await fetch(api+"?t="+Date.now(),{cache:"no-store"});var d=await r.json();if(d&&d.dataUrl){img.src=d.dataUrl;st.textContent=d.stale?"Última copia · reintentando":"QR vigente · "+(d.age||0)+" s";}else{st.textContent="Reintentando...";}}catch(e){st.textContent="Sin conexión · última copia";}}refresh();setInterval(refresh,15000);})();',
+        '</script></div></div></body></html>'
+    ].join('');
+}
+
+function nextFreeSlot() {
+    const items = readSessionsRegistry();
+    return items.find(x => !x.assignedTo) || null;
+}
+
+// Obtiene el QR vigente de una sesión con caché corta y respaldo local.
+async function getQrData(slug) {
+    const item = readSessionsRegistry().find(x => x.slug === slug);
+    if (!item) return { ok: false, error: 'sesion_no_encontrada' };
+    const jid = String(item.waSession || '');
+    const now = Date.now();
+    const cached = qrCache.get(slug);
+    if (cached && now - cached.ts < QR_TTL_MS) return { ...cached, age: Math.round((now - cached.ts) / 1000) };
+    if (qrLocks.has(slug)) {
+        const waited = await qrLocks.get(slug);
+        return waited;
+    }
+    const task = (async () => {
+        let dataUrl = '';
+        let stale = false;
+        let err = '';
+        try {
+            const raw = await new Promise((resolve) => {
+                const req = http.request(`${OPENWA_URL}/api/sessions/${encodeURIComponent(jid)}/qr`, {
+                    method: 'GET', headers: { 'X-API-Key': OPENWA_API_KEY }
+                }, (res) => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve({ status: res.statusCode, data: JSON.parse(b) }); } catch (e) { resolve({ status: res.statusCode, data: {} }); } }); });
+                req.on('error', () => resolve({ status: 0, data: {} }));
+                req.setTimeout(8000, () => { req.destroy(); resolve({ status: 0, data: {} }); });
+                req.end();
+            });
+            if (raw.status === 200 && raw.data) {
+                const du = raw.data.qrCode || raw.data.qr || '';
+                if (du) {
+                    dataUrl = du;
+                    const b64 = String(du).replace(/^data:[^;]+;base64,/, '');
+                    try {
+                        fs.mkdirSync(path.join(DATA_DIR, 'session_qr'), { recursive: true });
+                        fs.writeFileSync(path.join(DATA_DIR, 'session_qr', jid + '.png'), Buffer.from(b64, 'base64'));
+                    } catch (e) {}
+                }
+            } else if (raw.status === 400) {
+                const st = await new Promise((resolve) => {
+                    const req = http.request(`${OPENWA_URL}/api/sessions/${encodeURIComponent(jid)}/start`, {
+                        method: 'POST', headers: { 'X-API-Key': OPENWA_API_KEY }
+                    }, (res) => { res.on('data', () => {}); res.on('end', () => resolve(res.statusCode)); });
+                    req.on('error', () => resolve(0));
+                    req.setTimeout(10000, () => { req.destroy(); resolve(0); });
+                    req.end();
+                });
+                if (st >= 200 && st < 300) {
+                    await new Promise(r => setTimeout(r, 2500));
+                    const raw2 = await new Promise((resolve) => {
+                        const req = http.request(`${OPENWA_URL}/api/sessions/${encodeURIComponent(jid)}/qr`, {
+                            method: 'GET', headers: { 'X-API-Key': OPENWA_API_KEY }
+                        }, (res) => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { resolve({}); } }); });
+                        req.on('error', () => resolve({}));
+                        req.setTimeout(8000, () => { req.destroy(); resolve({}); });
+                        req.end();
+                    });
+                    dataUrl = raw2.qrCode || raw2.qr || '';
+                    if (dataUrl) {
+                        const b64 = String(dataUrl).replace(/^data:[^;]+;base64,/, '');
+                        try { fs.writeFileSync(path.join(DATA_DIR, 'session_qr', jid + '.png'), Buffer.from(b64, 'base64')); } catch (e) {}
+                    }
+                } else err = 'start_' + st;
+            } else err = 'qr_' + raw.status;
+        } catch (e) { err = String(e && e.message || e).slice(0, 120); }
+        if (!dataUrl) {
+            try {
+                const f = path.join(DATA_DIR, 'session_qr', jid + '.png');
+                if (fs.existsSync(f)) {
+                    dataUrl = 'data:image/png;base64,' + fs.readFileSync(f).toString('base64');
+                    stale = true;
+                }
+            } catch (e) {}
+        }
+        const result = dataUrl ? { ok: true, dataUrl, stale, err, ts: Date.now() } : { ok: false, error: err || 'qr_no_disponible', ts: Date.now() };
+        if (dataUrl) qrCache.set(slug, result);
+        return result;
+    })();
+    qrLocks.set(slug, task);
+    try { return await task; } finally { qrLocks.delete(slug); }
+}
+
 // Crea una sesión nueva en Open-WA y devuelve su QR para escanear.
 async function createOpenwaSession(label) {
     const name = String(label || ('Piston-' + Date.now())).slice(0, 60);
@@ -1173,6 +1304,22 @@ async function finalizeWhatsappPayment(sessionId, remoteJid, altIds, text, ocrRe
         reply = 'Analicé la imagen: ' + desc.replace(/^Descripción literal del comprobante:\n/, '') + '\n\n¿Quieres que te la describa con detalle? Responde SÍ.';
     } else {
         reply = ocrTrigger.buildResultReply({ approved, planId, amount, reason, needsReview });
+    }
+    if (approved) {
+        try {
+            const slot = nextFreeSlot();
+            if (slot) {
+                const items = readSessionsRegistry();
+                const target = items.find(x => x.slug === slot.slug);
+                if (target) {
+                    target.assignedTo = { userId: assigned && assigned.id, orderId, email: userLabel, ts: new Date().toISOString() };
+                    writeSessionsRegistry(items);
+                    const link = 'https://wa.pistonquarks.store/public/setup/' + encodeURIComponent(target.slug);
+                    reply += '\n\nConfigura tu WhatsApp aqui: ' + link;
+                    logEvent('info', 'session_slot_assigned', { slug: target.slug, port: target.port, orderId });
+                }
+            }
+        } catch (e) { logEvent('warn', 'session_slot_assign_error', { error: String(e && e.message || e).slice(0, 200) }); }
     }
     await sendToWhatsApp(sessionId, remoteJid, reply);
     if (isOtherDestination) {
@@ -2111,6 +2258,24 @@ const server = http.createServer(async (req, res) => {
         const fixed = clientLaunchers.fix20128Launcher();
         auditAdmin('fix_20128_launcher', fixed);
         sendJson(res, 200, { ok: true, ...fixed });
+        return;
+    } else if (pathname === '/setup' && req.method === 'GET') {
+        const item = readSessionsRegistry().find(x => Number(x.port) === Number(PORT)) || { name: SESSION_NAME, port: PORT, slug: SESSION_SLUG, waSession: LAST_SESSION_ID };
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(setupPageHtml({ name: item.name, port: item.port, slug: item.slug, jid: item.waSession || LAST_SESSION_ID }));
+        return;
+    } else if (/^\/public\/setup\/([^/]+)$/.test(pathname) && req.method === 'GET') {
+        const slug = decodeURIComponent(pathname.split('/')[3]);
+        const item = readSessionsRegistry().find(x => x.slug === slug);
+        if (!item) { sendJson(res, 404, { ok: false, error: 'sesion_no_encontrada' }); return; }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(setupPageHtml({ name: item.name, port: item.port, slug: item.slug, jid: item.waSession }));
+        return;
+    } else if (/^\/public\/qr-data\/([^/]+)$/.test(pathname) && req.method === 'GET') {
+        const slug = decodeURIComponent(pathname.split('/')[3]);
+        const d = await getQrData(slug);
+        const out = { ...d, age: d.ts ? Math.round((Date.now() - d.ts) / 1000) : 0 };
+        sendJson(res, out.ok ? 200 : 404, out);
         return;
     } else if (/^\/public\/session-qr\/[^/]+$/.test(pathname) && req.method === 'GET') {
         const id = decodeURIComponent(pathname.split('/')[3]);

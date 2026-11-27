@@ -190,3 +190,11 @@ _Actualizado: 2026-11-23_
 - Todos los enlaces van por wa.me con target=_blank para evitar ERR_BLOCKED_BY_RESPONSE de api.whatsapp.com dentro del marco. Botones acortados y CSS anti-desborde.
 - comprar.html muestra datos de pago: Plin/Yape 930640071, Interbank Simple 898 3510803100 y CCI 00389801351080310040; formulario con nombre, correo, celular, rubro y método de pago.
 - Comando WhatsApp "nueva sesion" crea sesión en Open-WA y envía link público https://wa.pistonquarks.store/public/session-qr/<id> para escanear QR; endpoint /public/session-new y /public/session-qr/:id.
+
+
+## 10 sesiones y QR dinámico (2026-11-27)
+- Registro con 10 sesiones piston-bot-01..10, puertos 2020..2029, páginas /public/setup/<slug> y /setup por puerto.
+- QR dinámico: /public/qr-data/<slug> consulta Open-WA con caché 20 s y respaldo PNG local; la página actualiza img cada 15 s. Resuelve rotación de QR.
+- Tras pago aprobado se asigna ranura libre y se envía enlace público por WhatsApp.
+- Links en docs/LINKS_10_SESIONES.md.
+- Nota: Docker/Open-WA quedó con engine 503 tras iniciar 10 motores; QR sirve última copia hasta restaurar.
