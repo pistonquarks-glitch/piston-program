@@ -49,3 +49,8 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 - Las páginas estáticas (piston-bot, blogs, sitemap y simulador) están en Workers Assets: funcionan con la laptop apagada.
 - /mi-panel redirige al panel del plan pagado según correo + código; sin credenciales muestra login.
 - Configuración aprendida se guarda en KV PISTON_SIM y se consulta en /api/simulator/config.
+
+
+## Blogs por palabra clave (2026-11-27)
+- automatizar-wasa, como-automatizar-wasap-whatsapp, automatizar-whatsapp-business-con-ia, automatizar-whatsapp-gratis, automatizar-whatsapp-con-excel y automatizar-mensajes-de-whatsapp-gratis.
+- Cada uno con keyword exacta en title, H1, primeras lineas, FAQPage y BreadcrumbList; enviados a IndexNow (200) junto a las 16 URLs del sitemap.
