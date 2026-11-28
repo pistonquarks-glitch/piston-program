@@ -54,3 +54,11 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 ## Blogs por palabra clave (2026-11-27)
 - automatizar-wasa, como-automatizar-wasap-whatsapp, automatizar-whatsapp-business-con-ia, automatizar-whatsapp-gratis, automatizar-whatsapp-con-excel y automatizar-mensajes-de-whatsapp-gratis.
 - Cada uno con keyword exacta en title, H1, primeras lineas, FAQPage y BreadcrumbList; enviados a IndexNow (200) junto a las 16 URLs del sitemap.
+
+
+## Blogs de demanda 2026-11-28 (pilar + cluster + ciudades)
+- Pilar: /blog/whatsapp-ia-peru.html — keyword “whatsapp ia” (pico 100 en Trends).
+- Cluster: chatbot-para-whatsapp, chatbot-whatsapp-gratis, ia-tipo-claude-para-whatsapp, automatizar-whatsapp-con-ia-negocio.
+- Locales: arequipa, puno, ayacucho, huancavelica, cusco, lima — cada una con score de Google Trends, rubros locales y comentario de lugareño claramente marcado como ejemplo hasta sustituirlo por testimonio verificado.
+- Cada blog incluye respuesta rápida, capturas necesarias y guion de vídeo de 18 s para reforzar el mensaje.
+- 13 URLs enviadas a IndexNow (api.indexnow.org y Bing): 200.
