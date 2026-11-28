@@ -7,6 +7,7 @@ assets = { directory = "../../mobile/www", binding = "ASSETS", run_worker_first 
 routes = [
   { pattern = "pistonquarks.store/piston-bot*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/piston-bot-sitemap.xml", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/assets/logo-neon.png", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/pistonbot-indexnow-20261127a1b2c3d4.txt", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/blog*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/api/simulator*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
