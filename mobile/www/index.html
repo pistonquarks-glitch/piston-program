@@ -6,7 +6,7 @@
 <title>Pistón Auto — Conversación transaccional por WhatsApp | Piston Quarks</title>
 <meta name="description" content="Dos sistemas: respuestas automáticas y respuestas infinitas con cerebro, con verificación de comprobantes Yape/PLIN con OCR+IA y reportes con gráficos de tus movimientos por WhatsApp.">
 <meta name="theme-color" content="#0B1220">
-<link rel="icon" type="image/png" href="assets/logo-cromado.png">
+<link rel="icon" href="/assets/logo-neon.png">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="site.css">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -32,15 +32,21 @@ body.pq-preview>*:not(.pq-toolbar):not(.pq-stage){display:none!important}
 .pq-frame iframe{width:100%;height:calc(100vh - 130px);min-height:700px;border:0;display:block;background:#061a16}
 @media(max-width:600px){.pq-stage{padding:8px}.pq-frame.phone{width:100%;max-width:100%}.pq-frame iframe{height:calc(100vh - 180px)}}
 </style>
+
+<style id="pb-neon-logo">
+.brand{display:flex!important;align-items:center;gap:10px}
+.brand .brand-logo,.logo-neon{width:42px;height:42px;object-fit:contain;border-radius:10px;filter:drop-shadow(0 0 10px rgba(34,211,238,.7))}
+.pb-brand{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(52,211,153,.28);background:#07100d}
+.pb-brand img{width:44px;height:44px;border-radius:10px;filter:drop-shadow(0 0 12px rgba(34,211,238,.75))}
+.pb-brand span{font-family:'Space Grotesk',Outfit,sans-serif;font-weight:800;letter-spacing:-.03em;font-size:19px;color:#f0fdf7}
+.pb-brand b{color:#34d399}
+</style>
 </head>
 <body>
 <div style="background:rgba(80,200,152,.12);color:#b7f3d8;text-align:center;padding:8px;font-size:13px;font-weight:700">BLACK FRIDAY · solo hoy · 20 primeros · desde S/15</div>
 <header class="nav">
   <div class="container nav-inner">
-    <a class="brand" href="index.html" aria-label="Piston Quarks">
-      <img class="brand-logo" src="assets/logo-cromado.png" width="38" height="38" alt="Piston Quarks">
-      <span class="brand-text">Piston<b>Quarks</b><em class="brand-tag">Pistón Auto</em></span>
-    </a>
+    <div class="brand"><a href="/piston-bot" aria-label="Piston Quarks"><img class="logo-neon" src="/assets/logo-neon.png" alt="Logo Piston Quarks"></a><span>PISTON <span>BOT</span></span></div>
     <nav class="nav-links" id="navLinks" aria-label="Navegación principal">
       <a href="index.html" class="active">Inicio</a>
       <a href="segmentos.html">Segmentos</a>

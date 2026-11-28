@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://pistonquarks.store/piston-bot">
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Piston Bot", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android, Windows", "description": "Automatización de WhatsApp con IA, OCR de comprobantes, panel por plan y vinculación sin cámara.", "url": "https://pistonquarks.store/piston-bot", "offers": [{"@type": "Offer", "price": "15", "priceCurrency": "PEN", "name": "Respuestas automáticas"}, {"@type": "Offer", "price": "50", "priceCurrency": "PEN", "name": "Cerebro IA sin OCR"}, {"@type": "Offer", "price": "120", "priceCurrency": "PEN", "name": "Cerebro IA con OCR"}, {"@type": "Offer", "price": "50", "priceCurrency": "PEN", "name": "Reportes gráficos"}, {"@type": "Offer", "price": "70", "priceCurrency": "PEN", "name": "CRM"}], "provider": {"@type": "Organization", "name": "Piston Quarks"}}</script>
-  <link rel="icon" href="/assets/logo-icon-v3.png" type="image/png">
+  <link rel="icon" href="/assets/logo-neon.png">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{--bg:#070b0a;--card:#0f1715;--line:rgba(52,211,153,.22);--neon:#34d399;--cyan:#22d3ee;--ink:#ecfdf5;--muted:#93b5ab;--warn:#fbbf24}
@@ -56,12 +56,21 @@
     @media(max-width:900px){.hero,.grid2,.paygrid{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr}}
     @media(max-width:560px){.steps,.plans{grid-template-columns:1fr}}
   </style>
+
+<style id="pb-neon-logo">
+.brand{display:flex!important;align-items:center;gap:10px}
+.brand .brand-logo,.logo-neon{width:42px;height:42px;object-fit:contain;border-radius:10px;filter:drop-shadow(0 0 10px rgba(34,211,238,.7))}
+.pb-brand{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(52,211,153,.28);background:#07100d}
+.pb-brand img{width:44px;height:44px;border-radius:10px;filter:drop-shadow(0 0 12px rgba(34,211,238,.75))}
+.pb-brand span{font-family:'Space Grotesk',Outfit,sans-serif;font-weight:800;letter-spacing:-.03em;font-size:19px;color:#f0fdf7}
+.pb-brand b{color:#34d399}
+</style>
 </head>
 <body>
   <div class="wrap">
     <nav class="nav">
-      <div class="brand">PISTON <span>BOT</span></div>
-      <a href="https://pistonquarks.store/blog/">Blog</a><a class="btn btn-ghost" href="https://pistonquarks.store/mi-panel" target="_blank" rel="noopener">Mi panel</a> <a class="btn btn-primary" href="#planes">Suscribirme</a>
+      <div class="brand"><a href="/piston-bot" aria-label="Piston Quarks"><img class="logo-neon" src="/assets/logo-neon.png" alt="Logo Piston Quarks"></a><span>PISTON <span>BOT</span></span></div>
+      <a href="https://pistonquarks.store/blog/">Blog Piston Bot</a><a class="btn btn-ghost" href="https://pistonquarks.store/mi-panel" target="_blank" rel="noopener">Mi panel</a> <a class="btn btn-primary" href="#planes">Suscribirme</a>
     </nav>
 
     <section class="hero">
@@ -121,7 +130,7 @@
     <section class="section" id="blog">
       <h2>Guías por rubro</h2>
       <p class="sub">Cada guía explica cuál de los 3 planes de Piston Bot conviene según tu negocio o carrera.</p>
-      <ul style="line-height:2"><li><a href="https://pistonquarks.store/blog/clinicas.html">Clínicas y estética</a></li><li><a href="https://pistonquarks.store/blog/comercio.html">Comercio y joyerías</a></li><li><a href="https://pistonquarks.store/blog/empresas.html">Empresas</a></li><li><a href="https://pistonquarks.store/blog/hoteles.html">Hoteles boutique</a></li><li><a href="https://pistonquarks.store/blog/inmobiliarias.html">Inmobiliarias</a></li><li><a href="https://pistonquarks.store/blog/restaurantes.html">Restaurantes</a></li><li><a href="https://pistonquarks.store/blog/vendedores.html">Vendedores</a></li></ul>
+      <ul style="line-height:2"><li><a href="https://pistonquarks.store/blogPISTONBOT/clinicas">Clínicas y estética</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/comercio">Comercio y joyerías</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/empresas">Empresas</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/hoteles">Hoteles boutique</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/inmobiliarias">Inmobiliarias</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/restaurantes">Restaurantes</a></li><li><a href="https://pistonquarks.store/blogPISTONBOT/vendedores">Vendedores</a></li></ul>
       <p><a class="btn ghost" href="https://pistonquarks.store/blog/">Ver todo el blog</a></p>
     </section>
 
@@ -177,5 +186,5 @@
     });
     updateWa();
   </script>
-<div style="text-align:center;padding:18px"><a href="/blog/whatsapp-ia-peru.html" style="color:#34d399">Guía: WhatsApp IA para negocios en Perú</a></div></body>
+<div style="text-align:center;padding:18px"><a href="/blogPISTONBOT/whatsapp-ia-peru" style="color:#34d399">Guía: WhatsApp IA para negocios en Perú</a></div></body>
 </html>

@@ -40,7 +40,7 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 ## SEO e indexación (2026-11-27)
 - Dominio público canonical: https://pistonquarks.store (sin el subdominio wa.). El Worker piston-bot-proxy sirve las rutas de Piston Bot sin tocar el sitio actual del raíz.
 - Sitemap: https://pistonquarks.store/piston-bot-sitemap.xml
-- Blog: https://pistonquarks.store/blog/ con 7 guías por buyer: clinicas, comercio, empresas, hoteles, inmobiliarias, restaurantes y vendedores. Cada una con keywords, BlogPosting + FAQPage en JSON-LD y comparativa de los 3 planes.
+- Blog: https://pistonquarks.store/blogPISTONBOT/ con 7 guías por buyer: clinicas, comercio, empresas, hoteles, inmobiliarias, restaurantes y vendedores. Cada una con keywords, BlogPosting + FAQPage en JSON-LD y comparativa de los 3 planes.
 - IndexNow enviado a api.indexnow.org y Bing (202 Accepted) con 9 URLs.
 
 
@@ -57,8 +57,13 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 
 
 ## Blogs de demanda 2026-11-28 (pilar + cluster + ciudades)
-- Pilar: /blog/whatsapp-ia-peru.html — keyword “whatsapp ia” (pico 100 en Trends).
+- Pilar: /blogPISTONBOT/whatsapp-ia-peru.html — keyword “whatsapp ia” (pico 100 en Trends).
 - Cluster: chatbot-para-whatsapp, chatbot-whatsapp-gratis, ia-tipo-claude-para-whatsapp, automatizar-whatsapp-con-ia-negocio.
 - Locales: arequipa, puno, ayacucho, huancavelica, cusco, lima — cada una con score de Google Trends, rubros locales y comentario de lugareño claramente marcado como ejemplo hasta sustituirlo por testimonio verificado.
 - Cada blog incluye respuesta rápida, capturas necesarias y guion de vídeo de 18 s para reforzar el mensaje.
 - 13 URLs enviadas a IndexNow (api.indexnow.org y Bing): 200.
+
+
+## Rebrand de blog y logo (2026-11-28)
+- Ruta publica: https://pistonquarks.store/blogPISTONBOT/ — URLs limpias sin .html; /blog/... redirige 301.
+- Logo neon.png en todas las paginas (nav, favicon) desde /assets/logo-neon.png.

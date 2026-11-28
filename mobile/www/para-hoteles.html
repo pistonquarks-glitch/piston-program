@@ -6,24 +6,27 @@
 <title>Pistón Auto para Hoteles boutique y alojamiento — verificación y reportes por WhatsApp</title>
 <meta name="description" content="El huésped ya pagó el adelanto… pero nadie lo verificó. Recepción busca la captura entre cientos de conversaciones, el check-in se demora y las reservas sin pago confirmado terminan en sobreventa. Pistón Auto liga cada adelanto a su habitación.">
 <meta name="theme-color" content="#0B1220">
-<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="icon" href="/assets/logo-neon.png">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="site.css">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b1220">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="./piston-modern.css">
+
+<style id="pb-neon-logo">
+.brand{display:flex!important;align-items:center;gap:10px}
+.brand .brand-logo,.logo-neon{width:42px;height:42px;object-fit:contain;border-radius:10px;filter:drop-shadow(0 0 10px rgba(34,211,238,.7))}
+.pb-brand{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(52,211,153,.28);background:#07100d}
+.pb-brand img{width:44px;height:44px;border-radius:10px;filter:drop-shadow(0 0 12px rgba(34,211,238,.75))}
+.pb-brand span{font-family:'Space Grotesk',Outfit,sans-serif;font-weight:800;letter-spacing:-.03em;font-size:19px;color:#f0fdf7}
+.pb-brand b{color:#34d399}
+</style>
 </head>
 <body>
 <header class="nav">
   <div class="container nav-inner">
-    <a class="brand" href="index.html" aria-label="Piston Quarks">
-      <svg class="brand-logo" width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <rect width="48" height="48" rx="12" fill="#F2B632"/>
-        <text x="24" y="33" text-anchor="middle" font-family="Georgia, serif" font-size="26" font-weight="800" fill="#0B1220">P</text>
-      </svg>
-      <span class="brand-text">Piston<b>Quarks</b><em class="brand-tag">Pistón Auto</em></span>
-    </a>
+    <div class="brand"><a href="/piston-bot" aria-label="Piston Quarks"><img class="logo-neon" src="/assets/logo-neon.png" alt="Logo Piston Quarks"></a><span>PISTON <span>BOT</span></span></div>
     <nav class="nav-links" id="navLinks" aria-label="Navegación principal">
       <a href="index.html">Inicio</a>
       <a href="segmentos.html" class="active">Segmentos</a>

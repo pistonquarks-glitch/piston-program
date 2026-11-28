@@ -121,8 +121,22 @@ export default {
       // --- Paginas estaticas (no dependen de la laptop) ---
       if (p === '/piston-bot') return asset(env, request, '/piston-bot.html');
       if (p === '/piston-bot-simulator') return asset(env, request, '/piston-bot-simulator.html');
-      if (p === '/blog' || p === '/blog/') return asset(env, request, '/blog/index.html');
-      if (p.startsWith('/blog/') || STATIC_EXACT.includes(p) || p.startsWith('/pistonbot-indexnow-')) {
+      // Blog Piston Bot: rutas limpias sin .html
+      if (p === '/blogPISTONBOT' || p === '/blogPISTONBOT/') return asset(env, request, '/blogPISTONBOT/index.html');
+      if (p.startsWith('/blogPISTONBOT/')) {
+        const rest = p.slice('/blogPISTONBOT/'.length);
+        if (rest && !rest.includes('.') && !rest.includes('/')) {
+          return asset(env, request, '/blogPISTONBOT/' + rest + '.html');
+        }
+        return asset(env, request, p);
+      }
+      // URLs antiguas redirigen 301 para no perder posicionamiento
+      if (p === '/blog' || p === '/blog/') return Response.redirect(new URL('/blogPISTONBOT/', url).toString(), 301);
+      if (p.startsWith('/blog/')) {
+        const clean = p.slice(6).replace(/\.html$/, '');
+        return Response.redirect(new URL('/blogPISTONBOT/' + clean, url).toString(), 301);
+      }
+      if (STATIC_EXACT.includes(p) || p.startsWith('/pistonbot-indexnow-')) {
         return asset(env, request, p);
       }
 
