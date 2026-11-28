@@ -3,11 +3,13 @@ main = "worker.js"
 compatibility_date = "2026-11-27"
 
 [env.production]
+assets = { directory = "../../mobile/www", binding = "ASSETS", run_worker_first = true, html_handling = "none" }
 routes = [
   { pattern = "pistonquarks.store/piston-bot*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
-  { pattern = "pistonquarks.store/pistonbot-indexnow-20261127a1b2c3d4.txt", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/piston-bot-sitemap.xml", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/pistonbot-indexnow-20261127a1b2c3d4.txt", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/blog*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
+  { pattern = "pistonquarks.store/api/simulator*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/panel-plan*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/mi-panel*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/panel-cliente*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
@@ -16,3 +18,11 @@ routes = [
   { pattern = "pistonquarks.store/public/*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" },
   { pattern = "pistonquarks.store/admin*", zone_id = "5f1f4434799aeb1a68461a68f57b5467" }
 ]
+
+[[env.production.kv_namespaces]]
+binding = "PISTON_SIM"
+id = "ae479db471f54993928bc0f4a30ea1a6"
+
+[env.production.vars]
+ORIGIN = "https://wa.pistonquarks.store"
+MODEL = "baidu/ernie-5.5-flash-preview:free"

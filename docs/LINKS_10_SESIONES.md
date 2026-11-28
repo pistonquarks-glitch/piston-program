@@ -42,3 +42,10 @@ El QR se actualiza automáticamente cada 20 segundos desde `public/qr-data/:slug
 - Sitemap: https://pistonquarks.store/piston-bot-sitemap.xml
 - Blog: https://pistonquarks.store/blog/ con 7 guías por buyer: clinicas, comercio, empresas, hoteles, inmobiliarias, restaurantes y vendedores. Cada una con keywords, BlogPosting + FAQPage en JSON-LD y comparativa de los 3 planes.
 - IndexNow enviado a api.indexnow.org y Bing (202 Accepted) con 9 URLs.
+
+
+## Simulador con IA y panel sin laptop (2026-11-27)
+- Simulador: https://pistonquarks.store/piston-bot-simulator — 3 pasos: entrenar negocio, probar con IA real (OpenRouter desde el Worker), descargar panel enlazado.
+- Las páginas estáticas (piston-bot, blogs, sitemap y simulador) están en Workers Assets: funcionan con la laptop apagada.
+- /mi-panel redirige al panel del plan pagado según correo + código; sin credenciales muestra login.
+- Configuración aprendida se guarda en KV PISTON_SIM y se consulta en /api/simulator/config.

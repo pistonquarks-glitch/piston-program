@@ -25,7 +25,7 @@ input,select{background:#0b2420;color:var(--text);border:1px solid var(--line);b
 @media(max-width:640px){.grid{grid-template-columns:1fr}.wrap{padding:14px 10px 40px}}
 </style></head><body>
 <div class="wrap">
-<nav class="nav"><div class="brand">PISTON <span>BOT</span></div><div><a href="/piston-bot">Producto</a><a href="/mi-panel">Mi panel completo</a></div></nav>
+<nav class="nav"><div class="brand">PISTON <span>BOT</span></div><div><a href="/piston-bot">Producto</a><a href="/mi-panel" onclick="this.href='/mi-panel'+location.search">Mi panel completo</a></div></nav>
 <h1>Plan 3 · Registros y gráficas</h1><p class="sub">Ingresos y egresos, integraciones con Excel/Sheets y CRM con gráficas.</p>
 <div id="login" class="card" style="display:none"><h2>Acceso a tu panel</h2><p class="small">Ingresa el correo y el código que recibiste al confirmar tu pago.</p>
 <form onsubmit="event.preventDefault();location.href='/panel-plan3?email='+encodeURIComponent(document.getElementById('le').value)+'&code='+encodeURIComponent(document.getElementById('lc').value);">

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi panel · Piston Bot</title><meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo-icon-v3.png">
+<style>
+:root{--bg:#070b0a;--card:#0f1715;--line:rgba(52,211,153,.22);--neon:#34d399;--ink:#ecfdf5;--muted:#93b5ab}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at 18% 0%,#0d2520 0%,var(--bg) 55%);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px;max-width:420px;width:calc(100% - 28px)}
+h1{font-size:20px;margin:0 0 6px}.small{font-size:12px;color:var(--muted);line-height:1.6}
+input{width:100%;background:#0b2420;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:13px;margin:8px 0}
+.btn{width:100%;background:linear-gradient(135deg,var(--neon),#0f9f78);color:#041a13;padding:12px;border:0;border-radius:10px;font-weight:800;cursor:pointer}
+a{color:var(--neon);font-size:12px}
+</style></head><body>
+<div class="card"><h1>Mi panel Piston Bot</h1>
+<p class="small">Ingresa el correo y el código de acceso que recibiste al confirmar tu pago. Te llevaremos al panel de tu plan.</p>
+<form onsubmit="event.preventDefault();location.href='/mi-panel?email='+encodeURIComponent(document.getElementById('e').value)+'&code='+encodeURIComponent(document.getElementById('c').value);">
+<input id="e" type="email" placeholder="tu@correo.com" required>
+<input id="c" placeholder="Código de acceso" required>
+<button class="btn" type="submit">Abrir mi panel</button></form>
+<p style="margin-top:16px"><a href="/piston-bot">Volver al producto</a></p>
+</div></body></html>

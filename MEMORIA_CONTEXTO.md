@@ -230,3 +230,10 @@ _Actualizado: 2026-11-23_
 - PUBLIC_BASE cambiado a https://pistonquarks.store.
 - 7 blogs SEO por buyer en mobile/www/blog/, con keywords, FAQ schema y comparativa de planes; index.html y sitemap.
 - IndexNow 202 OK en api.indexnow.org y Bing con 9 URLs.
+
+
+## Simulador IA 24/7 y mi panel por plan (2026-11-27)
+- Worker con Workers Assets + KV PISTON_SIM + secreto OPENROUTER_API_KEY; las páginas estáticas y el simulador funcionan sin la PC.
+- html_handling = none para evitar bucles de redirección .html.
+- /mi-panel con email+code consulta bootstrap al origen wa y redirige a /panel-planN; sin datos sirve mi-panel-login.html.
+- Landing con CTA "Probar mi bot con IA" y botón Mi panel ya no va al panel admin directo.

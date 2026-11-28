@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piston Bot — IA en tu WhatsApp | Piston Quarks</title>
+  <meta name="description" content="Piston Bot: pon una IA dentro de WhatsApp. Suscríbete, paga, confirma y activa tu bot escaneando un QR. Automatización real de Piston Quarks.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://pistonquarks.store/piston-bot">
+  <meta property="og:title" content="Piston Bot - IA en tu WhatsApp | Piston Quarks">
+  <meta property="og:description" content="Automatiza WhatsApp con IA, OCR y panel por plan. Pago verificado, enlace listo y vinculación sin cámara.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://pistonquarks.store/piston-bot">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Piston Bot", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android, Windows", "description": "Automatización de WhatsApp con IA, OCR de comprobantes, panel por plan y vinculación sin cámara.", "url": "https://pistonquarks.store/piston-bot", "offers": [{"@type": "Offer", "price": "15", "priceCurrency": "PEN", "name": "Respuestas automáticas"}, {"@type": "Offer", "price": "50", "priceCurrency": "PEN", "name": "Cerebro IA sin OCR"}, {"@type": "Offer", "price": "120", "priceCurrency": "PEN", "name": "Cerebro IA con OCR"}, {"@type": "Offer", "price": "50", "priceCurrency": "PEN", "name": "Reportes gráficos"}, {"@type": "Offer", "price": "70", "priceCurrency": "PEN", "name": "CRM"}], "provider": {"@type": "Organization", "name": "Piston Quarks"}}</script>
+  <link rel="icon" href="/assets/logo-icon-v3.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#070b0a;--card:#0f1715;--line:rgba(52,211,153,.22);--neon:#34d399;--cyan:#22d3ee;--ink:#ecfdf5;--muted:#93b5ab;--warn:#fbbf24}
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Outfit,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 20% 0%,#0d2520 0%,var(--bg) 55%);color:var(--ink);line-height:1.6}
+    a{color:var(--cyan)} .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 64px}
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
+    .brand{font-weight:800;font-size:1.1rem;letter-spacing:.02em}.brand span{color:var(--neon)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:10px;font-weight:700;text-decoration:none;border:1px solid var(--line);cursor:pointer;font:inherit}
+    .btn-primary{background:var(--neon);color:#042016;border-color:var(--neon);box-shadow:0 0 24px rgba(52,211,153,.25)}
+    .btn-primary:hover{filter:brightness(1.05)} .btn-ghost{background:rgba(255,255,255,.03);color:var(--ink)}
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center;padding:28px 0 40px}
+    .badge{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--neon);background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);padding:6px 12px;border-radius:999px;margin-bottom:14px}
+    h1{font-size:clamp(2rem,5vw,3.4rem);line-height:1.08;margin-bottom:14px} h1 .g{color:var(--neon)}
+    .lead{font-size:1.05rem;color:var(--muted);max-width:640px;margin-bottom:22px}
+    .hero-card{background:linear-gradient(160deg,#102522,#091412);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 0 40px rgba(34,211,238,.08)}
+    .hero-card .big{font-size:3rem;line-height:1;margin-bottom:8px}.hero-card h3{margin-bottom:6px}.hero-card p{color:var(--muted);font-size:.92rem}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:28px 0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+    .card h2,.card h3{margin-bottom:8px} .card p,.card li{color:var(--muted);font-size:.94rem}
+    .card ul{padding-left:18px} .card li{margin:6px 0}
+    .section{padding:34px 0;border-top:1px solid var(--line)} .section h2{font-size:1.7rem;margin-bottom:10px} .section .sub{color:var(--muted);margin-bottom:20px;max-width:720px}
+    .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+    .step .n{width:32px;height:32px;border-radius:50%;background:rgba(52,211,153,.15);color:var(--neon);display:flex;align-items:center;justify-content:center;font-weight:800;margin-bottom:10px}
+    .step h4{margin-bottom:4px;font-size:.98rem}.step p{color:var(--muted);font-size:.86rem}
+    .plans{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px}
+    .plan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;position:relative}
+    .plan.featured{border-color:rgba(52,211,153,.5);box-shadow:0 0 30px rgba(52,211,153,.12)}
+    .plan .tag{position:absolute;top:-11px;left:20px;background:var(--neon);color:#042016;font-size:.68rem;font-weight:800;padding:4px 10px;border-radius:999px}
+    .plan .name{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)} .plan .price{font-size:2.4rem;font-weight:800;margin:4px 0}
+    .plan .price small{font-size:.9rem;font-weight:500;color:var(--muted)} .plan ul{padding-left:18px;color:var(--muted);font-size:.9rem} .plan li{margin:6px 0}
+    .paygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+    .pay{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center}
+    .pay .ico{font-size:1.8rem;margin-bottom:4px}.pay .lbl{font-weight:700;margin-bottom:6px}
+    .pay .num{font-family:JetBrains Mono,monospace;font-size:1rem;color:var(--neon);word-break:break-word}
+    .pay .small{font-size:.78rem;color:var(--muted);margin-top:6px}
+    .confirm{background:linear-gradient(135deg,rgba(52,211,153,.08),rgba(34,211,238,.05));border:1px solid rgba(52,211,153,.3);border-radius:14px;padding:22px;margin-top:18px}
+    .confirm h3{margin-bottom:6px} .confirm p{color:var(--muted);font-size:.92rem;margin-bottom:12px}
+    .warn{font-size:.82rem;color:#fde68a;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);padding:10px 12px;border-radius:8px;margin-top:14px}
+    footer{padding-top:28px;color:#6b8f85;font-size:.82rem;text-align:center}
+    @media(max-width:900px){.hero,.grid2,.paygrid{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.steps,.plans{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <div class="brand">PISTON <span>BOT</span></div>
+      <a href="https://pistonquarks.store/blog/">Blog</a><a class="btn btn-ghost" href="https://pistonquarks.store/mi-panel" target="_blank" rel="noopener">Mi panel</a> <a class="btn btn-primary" href="#planes">Suscribirme</a>
+    </nav>
+
+    <section class="hero">
+      <div>
+        <div class="badge">Automatización WhatsApp · Piston Quarks</div>
+        <h1>Pon una IA en tu <span class="g">WhatsApp</span> y atiende en automático</h1>
+        <p class="lead">Piston Bot conecta tu WhatsApp con inteligencia artificial para responder, captar clientes y dar seguimiento. Te suscribes, confirmas tu pago y activas tu bot escaneando un QR.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="#planes">Ver planes y suscribirme</a>
+          <a class="btn btn-ghost" href="#como-funciona">Cómo funciona</a>
+        </div>
+        <div class="small" style="margin-top:14px;color:var(--neon)">Activación automática: pago verificado, panel asignado según tu plan y enlace entregado de inmediato. Sin instalaciones.</div>
+      </div>
+      <div class="hero-card">
+        <div class="big">💬🤖</div>
+        <h3>IA dentro de WhatsApp</h3>
+        <p>Respuestas automáticas, detección de conversación humana, registro de contexto y atención continua. Diseñado para negocios que quieren vender y responder más rápido.</p>
+      </div>
+    </section>
+
+    <section class="grid2">
+      <div class="card">
+        <h2>¿Por qué Piston Quarks?</h2>
+        <p>Somos la única empresa que se metió de lleno en las actividades del mercado de automatización y basamos nuestras soluciones en problemas reales que ya hemos experimentado.</p>
+      </div>
+      <div class="card">
+        <h2>¿Por qué este producto?</h2>
+        <p><strong>Piston Bot es más versátil y accesible:</strong> pone una IA dentro de WhatsApp de forma simple para tu negocio. Te suscribes, activas y empiezas a atender con un flujo guiado.</p>
+      </div>
+    </section>
+
+    <section class="section" id="como-funciona">
+      <h2>Cómo funciona</h2>
+      <p class="sub">Embudo claro: entras, eliges plan, pagas, envías comprobante y recibes tu enlace de activación para escanear WhatsApp.</p>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h4>Entra y elige</h4><p>Revisa el producto y elige el plan que necesitas.</p></div>
+        <div class="step"><div class="n">2</div><h4>Confirma y paga</h4><p>Verifica tus datos, plan y duración. Paga por Plin/Yape o transferencia Interbank.</p></div>
+        <div class="step"><div class="n">3</div><h4>Envía comprobante</h4><p>Manda la constancia por WhatsApp para confirmar tu pago.</p></div>
+        <div class="step"><div class="n">4</div><h4>Escanea y activa</h4><p>Recibes el link de enlace para escanear tu WhatsApp y comenzar la configuración.</p></div>
+      </div>
+    </section>
+
+            <section class="section" id="planes">
+      <h2>Productos Piston Bot</h2>
+      <p class="sub">Todo se llama Piston Bot. Cada botón abre WhatsApp con tu producto ya escrito. Black Friday: solo hoy y para los 20 primeros.</p>
+      <div class="plans">
+        <div class="plan"><div class="name">Respuestas automáticas</div><div class="price">S/ 15 <small>/ primer mes</small></div><p class="small">Respuestas por gatillos, panel propio y 1 número. Sin OCR ni IA.</p><div style="margin-top:14px"><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/51930640071?text=Hola%20Piston%20Quarks%2C%20quiero%20contratar%20Piston%20Bot%20-%20Respuestas%20autom%C3%A1ticas%20%28plan%20automatizadas%2C%20Black%20Friday%20S%2F15%29.%20Quiero%20que%20me%20guien%20para%20pagar%20y%20activar%20mi%20bot.">Elegir Respuestas automáticas</a></div></div>
+        <div class="plan"><div class="name">Cerebro IA sin OCR</div><div class="price">S/ 50 <small>/ primer mes</small></div><p class="small">IA que piensa, 50 árboles de lógica, directivas y programados.</p><div style="margin-top:14px"><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/51930640071?text=Hola%20Piston%20Quarks%2C%20quiero%20contratar%20Piston%20Bot%20-%20Cerebro%20IA%20sin%20OCR%20%28plan%20cerebro_sin_ocr%2C%20Black%20Friday%20S%2F50%29.%20Quiero%20que%20me%20guien%20para%20pagar%20y%20activar%20mi%20bot.">Elegir Cerebro IA sin OCR</a></div></div>
+        <div class="plan featured"><div class="name">Cerebro IA con OCR</div><div class="price">S/ 120 <small>/ primer mes</small></div><p class="small">Todo lo anterior más lectura de comprobantes y reportes.</p><div style="margin-top:14px"><a class="btn btn-primary" target="_blank" rel="noopener" href="https://wa.me/51930640071?text=Hola%20Piston%20Quarks%2C%20quiero%20contratar%20Piston%20Bot%20-%20Cerebro%20IA%20con%20OCR%20%28plan%20cerebro_ocr%2C%20Black%20Friday%20S%2F120%29.%20Quiero%20que%20me%20guien%20para%20pagar%20y%20activar%20mi%20bot.">Elegir Cerebro IA con OCR</a></div></div>
+        <div class="plan"><div class="name">Reportes gráficos</div><div class="price">S/ 50 <small>/ primer mes</small></div><p class="small">Dashboard de entrantes, salientes, pagos y consumo.</p><div style="margin-top:14px"><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/51930640071?text=Hola%20Piston%20Quarks%2C%20quiero%20contratar%20Piston%20Bot%20-%20Reportes%20gr%C3%A1ficos%20%28plan%20reportes_graficos%2C%20Black%20Friday%20S%2F50%29.%20Quiero%20que%20me%20guien%20para%20pagar%20y%20activar%20mi%20bot.">Elegir Reportes gráficos</a></div></div>
+        <div class="plan"><div class="name">CRM</div><div class="price">S/ 70 <small>/ primer mes</small></div><p class="small">Gestión de clientes, pedidos y seguimiento comercial.</p><div style="margin-top:14px"><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/51930640071?text=Hola%20Piston%20Quarks%2C%20quiero%20contratar%20Piston%20Bot%20-%20CRM%20%28plan%20crm%2C%20Black%20Friday%20S%2F70%29.%20Quiero%20que%20me%20guien%20para%20pagar%20y%20activar%20mi%20bot.">Elegir CRM</a></div></div>
+      </div>
+      <p class="small" style="margin-top:12px">Después de los 20 primeros vuelven los precios regulares: S/100, S/400, S/600, S/600 y S/100.</p>
+    </section>
+
+    <section class="section" id="blog">
+      <h2>Guías por rubro</h2>
+      <p class="sub">Cada guía explica cuál de los 3 planes de Piston Bot conviene según tu negocio o carrera.</p>
+      <ul style="line-height:2"><li><a href="https://pistonquarks.store/blog/clinicas.html">Clínicas y estética</a></li><li><a href="https://pistonquarks.store/blog/comercio.html">Comercio y joyerías</a></li><li><a href="https://pistonquarks.store/blog/empresas.html">Empresas</a></li><li><a href="https://pistonquarks.store/blog/hoteles.html">Hoteles boutique</a></li><li><a href="https://pistonquarks.store/blog/inmobiliarias.html">Inmobiliarias</a></li><li><a href="https://pistonquarks.store/blog/restaurantes.html">Restaurantes</a></li><li><a href="https://pistonquarks.store/blog/vendedores.html">Vendedores</a></li></ul>
+      <p><a class="btn ghost" href="https://pistonquarks.store/blog/">Ver todo el blog</a></p>
+    </section>
+
+    <section class="section" id="pago">
+      <h2>Zona de pago</h2>
+      <p class="sub">Confirma tus datos, plan y duración antes de pagar. Luego envía tu comprobante por WhatsApp para validar la activación.</p>
+      <div class="card" style="margin-bottom:14px">
+        <p><strong>Plan seleccionado:</strong> <span id="planSel">Piston Bot - Automáticas</span> <span style="color:var(--muted)">(puedes cambiarlo arriba)</span></p>
+      </div>
+      <div class="paygrid">
+        <div class="pay">
+          <div class="ico">💚</div>
+          <div class="lbl">Yape</div>
+          <div class="num">930 640 071</div>
+          <div class="small">A nombre de <strong>Cristian Valverde</strong></div>
+        </div>
+        <div class="pay">
+          <div class="ico">🏦</div>
+          <div class="lbl">Interbank - Cuenta Simple Soles</div>
+          <div class="num">898 3510803100</div>
+          <div class="small">CCI: <span style="font-family:JetBrains Mono,monospace">00389801351080310040</span></div>
+        </div>
+        
+      </div>
+
+      <div class="confirm">
+        <h3>Confirmar pago y activar</h3>
+        <p>Después de realizar el pago, envía el comprobante por WhatsApp para confirmar. Te responderemos con el enlace de activación para escanear tu WhatsApp y comenzar la configuración.</p>
+        <a id="waBtn" class="btn btn-primary" target="_blank" rel="noopener" href="#">Enviar comprobante por WhatsApp</a>
+        <div class="small" style="margin-top:14px">El OCR valida tu comprobante, te entrega el enlace de tu panel según el plan pagado y te guía para vincular WhatsApp con un código de 8 dígitos o con QR.</div>
+      </div>
+    </section>
+
+    <footer>
+      Piston Quarks · Piston Bot — automatización de WhatsApp con IA, pago verificado y panel por plan.
+    </footer>
+  </div>
+
+  <script>
+    let plan = 'Piston Bot - Automáticas';
+    const WHATSAPP = 'https://wa.me/51930640071?text=';
+    function selectPlan(p){
+      plan = p;
+      const el = document.getElementById('planSel'); if(el) el.textContent = p;
+      updateWa();
+    }
+    function updateWa(){
+      const msg = `Hola Piston Quarks, acabo de pagar ${plan}.\nNombre: \nCorreo: \nMétodo: Plin/Yape o transferencia\nAdjunto mi comprobante para verificación y activación.`;
+      const b = document.getElementById('waBtn'); if(b) b.href = WHATSAPP + encodeURIComponent(msg);
+    }
+    document.querySelectorAll('.plans .btn').forEach(b=>{
+      b.addEventListener('click', ()=>{ try{ selectPlan(b.closest('.plan').querySelector('.name').textContent); }catch(e){} });
+    });
+    updateWa();
+  </script>
+</body>
+</html>
